@@ -1,11 +1,13 @@
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
+from docx import Document
+from io import BytesIO
 
 # --- CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(page_title="Sistema Profesional FES", layout="wide")
 
-# Inicialización de la memoria de la sesión
+# Inicialización de seguridad para evitar AttributeError
 if 'respuestas' not in st.session_state:
     st.session_state.respuestas = {i: None for i in range(1, 91)}
 
@@ -17,7 +19,7 @@ with st.sidebar:
     
     nombre = st.text_input("Nombre Completo del Informante", placeholder="Ej: Juan Pérez")
     edad = st.number_input("Edad", 12, 99, 30)
-    profesion = st.text_input("Profesión / Ocupación", placeholder="Ej: Docente, Comerciante")
+    profesion = st.text_input("Profesión / Ocupación", placeholder="Ej: Docente, Abogado")
     
     st.subheader("🌐 Contexto Analítico")
     composicion = st.selectbox("Composición Familiar", ["Nuclear", "Extensa", "Monoparental", "Reconstituida"])
@@ -30,20 +32,18 @@ with st.sidebar:
     cultura = st.text_area("Antecedentes Culturales", placeholder="Valores religiosos o regionales")
 
 # --- 2. HOJAS DE TRABAJO (TABS) ---
-tab1, tab2, tab3 = st.tabs(["📄 Instrucciones", "📝 Aplicación (90 Ítems)", "📊 Perfil e IA"])
+tab1, tab2, tab3 = st.tabs(["📄 Hoja 1: Instrucciones", "📝 Hoja 2: Aplicación (90 Ítems)", "📊 Hoja 3: Perfil e IA"])
 
 with tab1:
     st.header("Instrucciones de la Escala FES")
     st.markdown(f"""
     **Estimado(a) {nombre if nombre else 'Usuario'}:**
+    Lea las frases pausadamente. Decida si cada una describe a su familia la mayoría de las veces (**Verdadero**) o si no la describe (**Falso**).
     
-    A continuación aparecen 90 frases. Debe decidir si cada una describe a su familia la mayoría de las veces (**Verdadero**) o si no la describe (**Falso**).
-    
-    *   **Pausadamente:** Tómese su tiempo para reflexionar en cada punto.
-    *   **Contexto:** Piense en las personas con las que convive actualmente.
-    *   **Honestidad:** No hay respuestas correctas, solo perfiles reales.
+    *   **Marca:** El sistema registra automáticamente la escala como **[X] FES**.
+    *   **Contexto:** Responda pensando en las personas con las que convive actualmente.
     """)
-    st.info("Al terminar, el sistema cruzará sus datos de profesión y contexto para el informe final.")
+    st.info("Al terminar, se realizará el análisis cruzado con su profesión y etapa vital.")
 
 with tab2:
     st.header("Cuestionario FES")
@@ -141,7 +141,6 @@ with tab2:
         90: "En mi familia no hay muchas reglas que cumplir"
     }
 
-    # Bucle para mostrar las 90 preguntas
     for i in range(1, 91):
         st.session_state.respuestas[i] = st.radio(
             f"**{i}. {preguntas_fes[i]}**",
@@ -150,8 +149,6 @@ with tab2:
             key=f"q_{i}",
             horizontal=True
         )
-    
-    st.success("Cuestionario Completo. Revise los resultados en la Hoja 3.")
 
 with tab3:
     if None in st.session_state.respuestas.values():
@@ -159,32 +156,40 @@ with tab3:
     else:
         st.header(f"Informe de Resultados: Familia de {nombre}")
         
-        # --- LÓGICA DE CALIFICACIÓN (Puntajes S Simulados para el ejemplo) ---
+        # 1. VALORES DE EJEMPLO (Aquí se integra la lógica de calificación real)
         sub_nombres = ["CO", "EX", "CT", "AU", "AC", "IC", "SR", "MR", "OR", "CN"]
-        s_valores = [45, 52, 38, 60, 55, 48, 42, 58, 65, 40] # Ej: Puntajes típicos S
+        s_valores = [45, 52, 38, 55, 60, 48, 50, 42, 58, 65] 
         
-        # --- GRÁFICO 1: PERFIL INDIVIDUAL ---
+        # 2. CÁLCULO DE DIMENSIONES
+        relaciones = (s_valores[0] + s_valores[1] + (100 - s_valores[2])) / 3
+        desarrollo = sum(s_valores[3:8]) / 5
+        estabilidad = (s_valores[8] + s_valores[9]) / 2
+        dim_valores = [relaciones, desarrollo, estabilidad]
+        dim_nombres = ["Relaciones", "Desarrollo", "Estabilidad"]
+
+        # 3. GRÁFICO 1: PERFIL DE SUBESCALAS
         fig_ind = go.Figure()
-        fig_ind.add_trace(go.Scatter(x=sub_nombres, y=s_valores, mode='lines+markers', line_color='darkblue', name="Perfil Subescalas"))
-        fig_ind.update_layout(title="Perfil Individual de las 10 Subescalas (S)", yaxis_range=, template="plotly_white")
+        fig_ind.add_trace(go.Scatter(x=sub_nombres, y=s_valores, mode='lines+markers', marker=dict(size=10, symbol='square'), line_color='navy'))
+        fig_ind.update_layout(title="Perfil Individual FES (Puntajes S)", yaxis_range=[0, 100], template="plotly_white")
         st.plotly_chart(fig_ind)
 
-        # --- ANÁLISIS DE IA CONTEXTUAL ---
+        # 4. GRÁFICO 2: DIMENSIONES
+        fig_dim = go.Figure(data=[go.Bar(x=dim_nombres, y=dim_valores, marker_color=['#2E86C1', '#28B463', '#D35400'])])
+        fig_dim.update_layout(title="Análisis por Dimensiones", yaxis_range=[0, 100], template="plotly_white")
+        st.plotly_chart(fig_dim)
+
+        # 5. ANÁLISIS DE IA CONTEXTUAL
         st.subheader("🧠 Interpretación Clínica Basada en Contexto")
-        
         col1, col2 = st.columns(2)
         with col1:
-            st.write(f"**Análisis por Profesión y Perfil:**")
-            st.write(f"Como **{profesion}**, su percepción de la subescala de 'Organización' ({s_valores[8]}) sugiere una alta valoración de la estructura.")
-            
-            if s_valores[9] > 60 and "Hijos Pequeños" in ciclo_vital:
-                st.info("✅ **Nota Clínica:** El puntaje de 'Control' es elevado, lo cual es funcional y normativo dada la etapa de desarrollo de los hijos (Protección/Supervisión).")
-            
+            st.markdown("**Análisis por Perfil y Ocupación:**")
+            st.write(f"Dada su profesión (**{profesion}**), su percepción de la estructura familiar puede estar vinculada a estándares de eficacia y orden.")
+            if s_valores[9] > 60 and "Infantes" in ciclo_vital:
+                st.info("✅ **Nota Clínica:** El Control elevado es funcional para la etapa de crianza de niños pequeños.")
         with col2:
-            st.write("**Impacto del Contexto:**")
+            st.markdown("**Impacto de Eventos y Crisis:**")
             if crisis:
-                st.warning(f"⚠️ **Alerta:** Los resultados están 'ensuciados' por la crisis reportada: {crisis}. El clima es reactivo, no estructural.")
-            st.write(f"**Dinámica de Autoridad:** {jerarquia if jerarquia else 'No especificada'}")
+                st.warning(f"⚠️ **Alerta:** Clima influenciado por: {crisis}. Se recomienda reevaluar tras el periodo de ajuste.")
+            st.write(f"**Cultura:** {cultura if cultura else 'Estándar'}")
 
-        st.success(f"Informe generado para {nombre}. Marque con una cruz: [X] FES")
-
+        st.success(f"Informe listo. Escala marcada: [X] FES")
