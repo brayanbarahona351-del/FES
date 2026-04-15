@@ -1,126 +1,113 @@
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
-from docx import Document
-from docx.shared import Pt, RGBColor
-from docx.enum.text import WD_ALIGN_PARAGRAPH
 from io import BytesIO
 
-# --- CONFIGURACIÓN ---
-st.set_page_config(page_title="Software Profesional FES", layout="wide")
+# --- CONFIGURACIÓN ESTILO EXCEL (FONDO NARANJA) ---
+st.markdown("""
+    <style>
+    .excel-header {
+        background-color: #E67E22;
+        color: white;
+        padding: 40px;
+        text-align: center;
+        border-radius: 10px;
+        font-family: 'Arial Black', Gadget, sans-serif;
+    }
+    .main { background-color: #f0f2f6; }
+    </style>
+    """, unsafe_allow_html=True)
 
-if 'respuestas' not in st.session_state:
-    st.session_state.respuestas = {i: None for i in range(1, 91)}
+# --- ESTRUCTURA TÉCNICA FES DE MOOS ---
+# Definición de la jerarquía: Dimensión -> Subdimensiones
+JERARQUIA_FES = {
+    "RELACIONES": {
+        "Sub": ["Cohesión (CO)", "Expresividad (EX)", "Conflicto (CT)"],
+        "Color": "#2E86C1",
+        "Dinamica": "Mide el grado de comunicación y apoyo libre entre los miembros contra la expresión de ira."
+    },
+    "DESARROLLO": {
+        "Sub": ["Autonomía (AU)", "Actuación (AC)", "Intelectual (IC)", "Social-Rec (SR)", "Moralidad (MR)"],
+        "Color": "#28B463",
+        "Dinamica": "Evalúa los procesos de crecimiento personal fomentados por el grupo familiar."
+    },
+    "ESTABILIDAD": {
+        "Sub": ["Organización (OR)", "Control (CN)"],
+        "Color": "#CB4335",
+        "Dinamica": "Analiza la estructura, reglas y jerarquías que rigen la convivencia."
+    }
+}
 
-# --- FUNCIÓN: GENERADOR DE WORD (ESTRUCTURA EXCEL) ---
-def generar_word_excel_style(datos, pd_res, s_res, analisis_extenso, plan_terapeutico):
-    doc = Document()
-    
-    # HOJA 1: CARÁTULA Y DATOS ORIGINALES
-    title = doc.add_heading('REPORTE CLÍNICO: ESCALA DE CLIMA SOCIAL FAMILIAR (FES)', 0)
-    title.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    
-    doc.add_heading('I. Datos de Identificación', level=1)
-    for k, v in datos.items():
-        doc.add_paragraph().add_run(f"{k}: {v}").bold = True
+# --- INTERFAZ TIPO EXCEL (Imagen de referencia) ---
+st.markdown('<div class="excel-header"><h3>Escala del Clima Social Familiar</h3><h1>FES DE MOOS</h1></div>', unsafe_allow_html=True)
 
-    doc.add_page_break()
+with st.container():
+    col1, col2 = st.columns(2)
+    with col1:
+        nombre = st.text_input("NOMBRE", "Barayan Adan Barahona Marquez")
+        edad = st.number_input("EDAD", 0, 100, 20)
+        ocupacion = st.text_input("OCUPACION", "Policia")
+    with col2:
+        grado = st.text_input("GRADO", "Bachiller")
+        examinado = st.text_input("EXAMINADO POR", "Sistema Automático")
+        fecha = st.date_input("FECHA")
 
-    # HOJA 2: CUADRO DE RESULTADOS (RÉPLICA EXCEL)
-    doc.add_heading('II. Cuadro Estadístico de Subescalas', level=1)
-    table = doc.add_table(rows=1, cols=3)
-    table.style = 'Table Grid'
-    hdr = table.rows[0].cells
-    hdr[0].text, hdr[1].text, hdr[2].text = 'Subescala', 'PD', 'S'
-    
-    for sub, val in pd_res.items():
-        row = table.add_row().cells
-        row[0].text, row[1].text, row[2].text = sub, str(val), str(s_res[sub])
+# --- LÓGICA DE RESULTADOS (Simulada para el ejemplo) ---
+# En un caso real, aquí iría la suma de los "V" y "F" del cuestionario
+puntajes_s = {
+    "Cohesión (CO)": 65, "Expresividad (EX)": 40, "Conflicto (CT)": 75,
+    "Autonomía (AU)": 55, "Actuación (AC)": 60, "Intelectual (IC)": 45, "Social-Rec (SR)": 50, "Moralidad (MR)": 30,
+    "Organización (OR)": 35, "Control (CN)": 70
+}
 
-    doc.add_page_break()
+# --- PESTAÑA DE ANÁLISIS Y GRÁFICOS ---
+st.divider()
+st.header("📊 Análisis de Dimensiones y Subdimensiones")
 
-    # HOJA 3: ANÁLISIS Y PLAN TERAPÉUTICO EXTENSO
-    doc.add_heading('III. Análisis Clínico y Plan de Intervención', level=1)
-    
-    doc.add_heading('Interpretación por Áreas', level=2)
-    doc.add_paragraph(analisis_extenso)
-    
-    doc.add_heading('Plan Terapéutico Sugerido', level=2)
-    doc.add_paragraph(plan_terapeutico)
-    
-    buf = BytesIO()
-    doc.save(buf)
-    buf.seek(0)
-    return buf
+# 1. GRÁFICO INTEGRADO (Todas las dimensiones unidas)
+st.subheader("I. Perfil General Integrado")
+fig_global = go.Figure()
+for dim, info in JERARQUIA_FES.items():
+    valores = [puntajes_s[s] for s in info["Sub"]]
+    fig_global.add_trace(go.Bar(x=info["Sub"], y=valores, name=dim, marker_color=info["Color"]))
 
-# --- SIDEBAR: DATOS ORIGINALES DEL TEST ---
-with st.sidebar:
-    st.header("📋 Ficha Técnica")
-    st.markdown("**Escala Aplicada: [X] FES**")
-    nombre = st.text_input("Nombre Completo", "Barayan Adan Barahona Marquez")
-    edad = st.number_input("Edad", 12, 99, 32)
-    profesion = st.text_input("Profesión", "Policia")
-    sexo = st.selectbox("Sexo", ["Masculino", "Femenino"])
-    st.divider()
-    if st.button("🗑️ Reiniciar Prueba"):
-        st.session_state.respuestas = {i: None for i in range(1, 91)}
-        st.rerun()
+fig_global.update_layout(barmode='group', yaxis_range=[0, 100], title="Comparativa de Subescalas por Dimensión")
+st.plotly_chart(fig_global, use_container_width=True)
 
-# --- PESTAÑAS (ESTRUCTURA DE HOJAS EXCEL) ---
-tab1, tab2, tab3 = st.tabs(["📄 Hoja 1: Instrucciones", "📝 Hoja 2: Aplicación", "📊 Hoja 3: Resultados e Informe"])
+# 2. GRÁFICOS POR DIMENSIÓN Y ANÁLISIS DE DINÁMICA
+st.subheader("II. Análisis Profundo de la Dinámica Familiar")
 
-with tab1:
-    st.header("Instrucciones Originales")
-    st.markdown(f"""
-    **Estimado(a) {nombre}:**
-    
-    Marque **V** (Verdadero) o **F** (Falso) a las siguientes 90 frases. 
-    Llene la prueba **pausadamente**, analizando el clima actual de su hogar.
-    No existen respuestas buenas ni malas.
-    """)
-
-with tab2:
-    st.header("Cuestionario FES")
-    # Diccionario con las preguntas (Mostrando ejemplo, pero configurado para las 90)
-    preguntas_fes = {1: "En mi familia nos ayudamos y apoyamos realmente unos a otros", 2: "Los miembros de la familia guardan, a menudo, sentimientos para sí mismos", 3: "En nuestra familia discutimos mucho"}
-    # ... (Resto de las 90 preguntas cargadas internamente)
-    
-    for i in range(1, 91):
-        txt = preguntas_fes.get(i, f"Frase {i} del manual original FES.")
-        st.session_state.respuestas[i] = st.radio(f"**{i}.** {txt}", ["V", "F"], key=f"q{i}", horizontal=True, index=None if st.session_state.respuestas[i] is None else ["V", "F"].index(st.session_state.respuestas[i]))
-
-with tab3:
-    if None in st.session_state.respuestas.values():
-        st.warning("⚠️ Debe completar el cuestionario para generar el análisis extenso.")
-    else:
-        # Lógica de Puntajes (Ejemplo de Subescalas)
-        sub_n = ["CO", "EX", "CT", "AU", "AC", "IC", "SR", "MR", "OR", "CN"]
-        pd_v = {s: 5 for s in sub_n} # Puntajes Directos
-        s_v = {s: 50 for s in sub_n}  # Puntajes S (Típicos)
+for dim, info in JERARQUIA_FES.items():
+    with st.expander(f"VER DIMENSIÓN: {dim}", expanded=True):
+        c1, c2 = st.columns([1, 2])
         
-        # --- GENERACIÓN DE ANÁLISIS EXTENSO POR IA ---
-        analisis_ia = f"""El perfil de {nombre} indica una dinámica familiar con niveles de Cohesión y Conflicto que sugieren... 
-        (Análisis detallado basado en los puntajes S obtenidos). Se observa una marcada tendencia en la dimensión de Relaciones..."""
+        with c1:
+            # Gráfico pequeño por dimensión
+            fig_dim = go.Figure(go.Scatterpolar(
+                r=[puntajes_s[s] for s in info["Sub"]],
+                theta=info["Sub"],
+                fill='toself',
+                marker_color=info["Color"]
+            ))
+            fig_dim.update_layout(polar=dict(radialaxis=dict(visible=True, range=[0, 100])), showlegend=False)
+            st.plotly_chart(fig_dim, use_container_width=True)
         
-        plan_terapeutico = """1. Fase de Evaluación: Entrevistas individuales para profundizar en la subescala de Conflicto.
-        2. Reestructuración de Roles: Definición clara de tareas para mejorar la subescala de Organización.
-        3. Taller de Comunicación: Enfoque en la subescala de Expresividad."""
+        with c2:
+            st.markdown(f"**Definición:** {info['Dinamica']}")
+            # Lógica de análisis dinámico
+            st.markdown("**Interpretación de la Dinámica:**")
+            
+            # Ejemplo de lógica para Dimensión Relaciones
+            if dim == "RELACIONES":
+                if puntajes_s["Conflicto (CT)"] > 60 and puntajes_s["Cohesión (CO)"] < 40:
+                    st.error("🚨 Dinámica de ALTO RIESGO: Se observa una familia con fuertes tensiones internas y escaso apoyo emocional.")
+                else:
+                    st.info("Dinámica Estable: Los niveles de conflicto y unión están dentro de los parámetros esperados.")
+            
+            # Ejemplo de lógica para Estabilidad
+            if dim == "ESTABILIDAD":
+                if puntajes_s["Control (CN)"] > 65 and puntajes_s["Organización (OR)"] < 40:
+                    st.warning("⚠️ Dinámica de CONTROL CAÓTICO: Existen muchas reglas impuestas pero falta orden en la ejecución diaria.")
 
-        st.subheader("Gráfica de Perfil (Subescalas)")
-        fig_ind = go.Figure(data=go.Scatter(x=sub_n, y=list(s_v.values()), mode='lines+markers', marker_symbol='square'))
-        fig_ind.update_layout(yaxis_range=[20, 80], template="plotly_white")
-        st.plotly_chart(fig_ind)
-
-        # BOTÓN DE IMPRESIÓN (IGUAL AL EXCEL)
-        datos_doc = {"Nombre": nombre, "Edad": edad, "Profesión": profesion, "Escala": "FES"}
-        word_doc = generar_word_excel_style(datos_doc, pd_v, s_v, analisis_ia, plan_terapeutico)
-        
-        st.download_button("📥 DESCARGAR INFORME ESTILO EXCEL (WORD)", word_doc, f"Informe_FES_{nombre}.docx")
-        
-        st.divider()
-        st.subheader("Análisis Clínico Extenso")
-        st.write(analisis_ia)
-        st.subheader("Plan Terapéutico")
-        st.write(plan_terapeutico)
-
-st.success(f"Sistema listo para {nombre}. [X] FES marcada.")
+# --- BOTÓN DE MODIFICACIÓN DE INSTRUCCIONES ---
+st.sidebar.info("Este programa ahora vincula cada subescala a su dimensión correspondiente según el manual de Moos.")
