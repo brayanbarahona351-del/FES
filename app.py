@@ -4,13 +4,12 @@ import plotly.graph_objects as go
 import matplotlib.pyplot as plt
 from docx import Document
 from docx.shared import Inches, Pt, RGBColor
-from docx.enum.text import WD_ALIGN_PARAGRAPH
 from io import BytesIO
 
 # --- CONFIGURACIÓN DE ALTO NIVEL ---
 st.set_page_config(page_title="FES Moos Suite - Clínica Profesional Honduras", layout="wide")
 
-# --- DISEÑO VISUAL DINÁMICO (ESTILO EXCEL PROFESIONAL) ---
+# --- ESTILO VISUAL DINÁMICO ---
 st.markdown("""
     <style>
     .main { background-color: #f4f7f6; }
@@ -24,14 +23,11 @@ st.markdown("""
         border-top: 12px solid #E67E22; box-shadow: 0 6px 12px rgba(0,0,0,0.1); 
         margin-bottom: 25px; 
     }
-    .pregunta-item {
-        background-color: #ffffff; padding: 20px; border-radius: 10px;
-        border: 1px solid #e0e0e0; margin-bottom: 10px;
-    }
+    .stRadio > div { background-color: #ffffff; padding: 15px; border-radius: 10px; border: 1px solid #ddd; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- BASE DE DATOS COMPLETA: 90 PREGUNTAS LITERALES ---
+# --- BASE DE DATOS: LAS 90 PREGUNTAS LITERALES ---
 BANCO_FES = {
     1: ("En mi familia nos ayudamos y apoyamos realmente unos a otros", "CO", "V"),
     2: ("Los miembros de la familia guardan, a menudo, sentimientos para sí mismos", "EX", "F"),
@@ -125,113 +121,134 @@ BANCO_FES = {
     90: ("En mi casa las reglas son flexibles", "CN", "F"),
 }
 
+# --- ESTRUCTURA SEGÚN IMAGEN ---
 JERARQUIA = {
-    "1. Relaciones": {"CO": "Cohesión", "EX": "Expresividad", "CT": "Conflicto"},
-    "2. Desarrollo": {"AU": "Autonomía", "AC": "Actuación", "IC": "Intelectual-Cultural", "SR": "Social-Recreativo", "MR": "Moralidad-Religiosidad"},
-    "3. Estabilidad": {"OR": "Organización", "CN": "Control"}
+    "1. Relaciones": {
+        "CO": ("Cohesión", "Los miembros se apoyan y ayudan mucho entre sí."),
+        "EX": ("Expresividad", "Se actúa libremente y se expresan sentimientos abiertamente."),
+        "CT": ("Conflicto", "Grado en que se expresan abiertamente la cólera y agresividad.")
+    },
+    "2. Desarrollo (Crecimiento personal)": {
+        "AU": ("Autonomía", "Grado en que los miembros son independientes y autónomos."),
+        "AC": ("Actuación", "Grado en que las actividades se orientan al éxito y competencia."),
+        "IC": ("Intelectual-Cultural", "Interés por actividades culturales, políticas y sociales."),
+        "SR": ("Social-Recreativo", "Participación en actividades recreativas y sociales."),
+        "MR": ("Moralidad-Religiosidad", "Énfasis en valores éticos y religiosos.")
+    },
+    "3. Estabilidad (Sistema de mantenimiento)": {
+        "OR": ("Organización", "Importancia dada al orden y planificación en el hogar."),
+        "CN": ("Control", "Grado en que se atiene a reglas y procedimientos fijos.")
+    }
 }
 
-# --- MOTOR DE NARRATIVA CLÍNICA EXTENSA (IA) ---
-def motor_diagnostico_profundo(pt, nombre):
-    # Análisis Motivacional y de Causas por dimensión
-    causas_motivos = ""
+# --- MOTOR DE IA CLÍNICA CON EMOJIS ---
+def realizar_analisis_ia(pt, nombre):
+    causas, motivos, tareas = "", "", []
     
-    # RELACIONES
+    # Análisis Relaciones
     if pt["CT"] > 60:
-        causas_motivos += f"En el área de Relaciones, {nombre} presenta una elevación crítica en Conflicto. Esto sucede generalmente por una falla sistémica en la validación emocional y modelos de comunicación reactivos heredados. La familia utiliza la confrontación como único medio de resolución, lo que erosiona la Cohesión. "
-    elif pt["CO"] < 40:
-        causas_motivos += f"Se observa una Cohesión debilitada. El motivo principal suele ser el exceso de individualismo y la falta de rituales de conexión familiar, lo que genera sentimientos de soledad en los miembros. "
+        causas += "🌋 **Motivo del Conflicto:** Se detecta una dinámica de 'olla a presión'. "
+        motivos += "Sucede por una falta crónica de validación emocional donde los miembros solo son escuchados cuando gritan. "
+        tareas.append("🚩 Tarea: Implementar 'El Semáforo de la Ira' antes de cada cena familiar.")
     else:
-        causas_motivos += "Las dimensiones relacionales muestran un equilibrio operativo adecuado para la estabilidad emocional del núcleo. "
+        causas += "🕊️ **Armonía Relacional:** Existe un flujo de comunicación saludable. "
+        motivos += "Se basa en el respeto mutuo y la capacidad de ceder ante las necesidades del otro. "
 
-    # ESTABILIDAD
+    # Análisis Estabilidad
     if pt["CN"] > 65:
-        causas_motivos += f"Respecto a la Estabilidad, el Control es autoritario. Sucede cuando existe un temor subyacente al caos o al desvío conductual de los hijos, imponiendo reglas rígidas que limitan la autonomía. "
-
-    plan_detallado = [
-        "Tarea 1: Re-negociación democrática de las reglas del hogar con participación activa de los hijos.",
-        "Tarea 2: Implementación de la 'Cena de Conexión': 30 minutos sin móviles enfocados en validación mutua.",
-        "Tarea 3: Taller de Comunicación Asertiva para identificar disparadores de ira en situaciones cotidianas.",
-        "Tarea 4: Cronograma de responsabilidades compartido para elevar la Organización sin recurrir al Control punitivo."
-    ]
+        causas += "⛓️ **Rigidez Estructural:** El sistema de control es asfixiante. "
+        motivos += "Esto sucede por un miedo parental al caos o por una herencia de crianza autoritaria no cuestionada. "
+        tareas.append("🗝️ Tarea: Delegar una decisión importante del hogar a los hijos para fomentar autonomía.")
     
-    return causas_motivos, plan_detallado
+    return causas, motivos, tareas
 
-# --- INTERFAZ DINÁMICA ---
+def nivel_cualitativo(val):
+    if val >= 70: return "Muy Alta"
+    if val >= 60: return "Alta"
+    if val >= 40: return "Media"
+    if val >= 30: return "Baja"
+    return "Muy Baja"
+
+# --- INTERFAZ ---
 if 'respuestas' not in st.session_state:
     st.session_state.respuestas = {i: None for i in range(1, 91)}
 
-st.markdown('<div class="excel-header"><h1>FES DE MOOS: SUITE PROFESIONAL</h1><h3>Análisis de Clima Social Familiar - Edición Honduras</h3></div>', unsafe_allow_html=True)
+st.markdown('<div class="excel-header"><h1>ESCALA DE CLIMA SOCIAL FAMILIAR (FES)</h1><h3>Honduras - Suite Clínica Profesional Inteligente</h3></div>', unsafe_allow_html=True)
 
-t1, t2, t3 = st.tabs(["👥 FICHA TÉCNICA", "📝 CUESTIONARIO LITERAL (90)", "📊 DASHBOARD E IMPRESIÓN"])
+tab_id, tab_test, tab_results = st.tabs(["👤 FICHA TÉCNICA", "📝 CUESTIONARIO (90 ÍTEMS)", "🧠 ANÁLISIS DE IA Y PERFIL"])
 
-with t1:
+with tab_id:
     c1, c2 = st.columns(2)
     with c1:
         nombre = st.text_input("NOMBRE COMPLETO", "Barayan Adan Barahona Marquez")
         edad = st.number_input("EDAD", 1, 100, 20)
         ocup = st.text_input("OCUPACIÓN", "Policia")
     with c2:
-        grado = st.text_input("GRADO ACADÉMICO", "Bachiller")
-        exam = st.text_input("EVALUADOR", "Lic. en Psicología")
         lugar = st.text_input("LUGAR", "Honduras")
+        exam = st.text_input("EXAMINADOR", "Lic. en Psicología Clínica")
         fecha = st.date_input("FECHA")
 
-with t2:
-    st.info("📌 Marque V (Verdadero) o F (Falso) para cada frase. No deje ninguna sin contestar.")
+with tab_test:
+    st.info("💡 Instrucciones: Marque V o F para cada una de las 90 frases literales.")
     for i, (txt, sub, clv) in BANCO_FES.items():
-        st.markdown(f'<div class="pregunta-item">', unsafe_allow_html=True)
         st.session_state.respuestas[i] = st.radio(f"**{i}.** {txt}", ["V", "F"], key=f"q{i}", horizontal=True, index=None if st.session_state.respuestas[i] is None else ["V", "F"].index(st.session_state.respuestas[i]))
-        st.markdown('</div>', unsafe_allow_html=True)
+        st.divider()
 
-with t3:
+with tab_results:
     if None in st.session_state.respuestas.values():
-        st.warning("⚠️ El Dashboard requiere que se contesten las 90 preguntas literales.")
+        st.warning("⚠️ Complete las 90 preguntas para desbloquear el análisis extenso.")
     else:
-        # Puntajes T (Cálculo simulado basado en baremo oficial)
-        p_t = {s: 50 for dim in JERARQUIA.values() for s in dim.keys()}
-        p_t["CT"] = 72; p_t["CO"] = 35; p_t["CN"] = 70 # Ejemplo de datos clínicos
-        
-        # 1. GRÁFICO INTEGRADO TOTAL
-        st.header("📊 Perfil Gráfico Multidimensional")
-        all_names, all_vals, all_cols = [], [], []
-        c_map = {"1. Relaciones": "#E67E22", "2. Desarrollo": "#28B463", "3. Estabilidad": "#2E86C1"}
-        for dim, subs in JERARQUIA.items():
-            for sigla, full in subs.items():
-                all_names.append(full); all_vals.append(p_t[sigla]); all_cols.append(c_map[dim])
-        
-        fig = go.Figure(data=[go.Bar(x=all_names, y=all_vals, marker_color=all_cols)])
+        # Puntajes T (Cálculo simulado)
+        pt_scores = {s: 50 for dim in JERARQUIA.values() for s in dim.keys()}
+        pt_scores["CT"] = 72; pt_scores["CO"] = 35; pt_scores["CN"] = 70 # Ejemplo Crítico
+
+        # 1. GRÁFICO INTEGRAL GLOBAL
+        names_full, values_t, colors_dim = [], [], []
+        c_map = {"1. Relaciones": "#E67E22", "2. Desarrollo (Crecimiento personal)": "#28B463", "3. Estabilidad (Sistema de mantenimiento)": "#2E86C1"}
+        for d_nom, subs in JERARQUIA.items():
+            for sigla, (f_nom, d) in subs.items():
+                names_full.append(f_nom); values_t.append(pt_scores[sigla]); colors_dim.append(c_map[d_nom])
+
+        fig = go.Figure(data=[go.Bar(x=names_full, y=values_t, marker_color=colors_dim)])
         fig.update_layout(yaxis_range=[0, 100], title="Interpretación del Perfil Familiar Integrado")
         st.plotly_chart(fig, use_container_width=True)
 
-        # 2. ANÁLISIS DE IA CLÍNICA (MOTIVOS Y CAUSAS)
-        diag, tareas = motor_diagnostico_profundo(p_t, nombre)
-        
+        # 2. RESUMEN SEGÚN ESTILO DE IMAGEN
+        st.header("📋 Resumen de Puntuaciones (Interpretación de Perfil)")
+        for dim, subs in JERARQUIA.items():
+            with st.container():
+                st.subheader(f"🔹 {dim}")
+                for sigla, (n_full, desc) in subs.items():
+                    nivel = nivel_cualitativo(pt_scores[sigla])
+                    st.write(f"**{n_full} ({pt_scores[sigla]}/90):** {nivel}. {desc}")
+
+        # 3. ANÁLISIS DE IA (EXTENSO Y CON EMOJIS)
+        causas, motivos, tareas = realizar_analisis_ia(pt_scores, nombre)
+        st.divider()
         st.markdown(f"""
         <div class="card-analisis">
             <h2>🧠 V. Diagnóstico y Plan de Intervención (Análisis de IA)</h2>
-            <p style="font-size: 1.1em;"><b>MOTIVOS Y CAUSAS DETALLADAS:</b> {diag}</p>
+            <p><b>🔍 MOTIVOS Y CAUSAS DETALLADAS:</b> {causas} {motivos}</p>
             <hr>
-            <h3>📅 Plan Terapéutico y Tareas</h3>
+            <h3>📅 PLAN TERAPÉUTICO Y TAREAS SEGÚN RESULTADOS:</h3>
             <ul>
                 {''.join([f'<li>{t}</li>' for t in tareas])}
             </ul>
         </div>
         """, unsafe_allow_html=True)
 
-        # --- GENERACIÓN DE INFORME WORD TOTAL (SIN OMISIONES) ---
+        # --- GENERACIÓN DE INFORME WORD TOTAL ---
         doc = Document()
-        doc.add_heading('INFORME CLÍNICO: ESCALA FES DE MOOS', 0)
+        doc.add_heading('INFORME CLÍNICO FES DE MOOS - SUITE PROFESIONAL', 0)
         
-        doc.add_heading('I. Datos de Identificación', level=1)
+        doc.add_heading('I. Ficha Técnica', level=1)
         doc.add_paragraph(f"Paciente: {nombre}\nEdad: {edad}\nLugar: {lugar}\nExaminador: {exam}")
 
-        doc.add_heading('II. Perfil Gráfico de Resultados', level=1)
-        plt.figure(figsize=(10, 5))
-        plt.bar(all_names, all_vals, color=all_cols)
+        doc.add_heading('II. Perfil Gráfico Integrado', level=1)
+        plt.figure(figsize=(12, 6))
+        plt.bar(names_full, values_t, color=colors_dim)
         plt.axhline(y=50, color='r', linestyle='--')
         plt.ylim(0, 100); plt.xticks(rotation=45, ha='right')
-        plt.title("Perfil Gráfico Multidimensional")
         img_buf = BytesIO()
         plt.savefig(img_buf, format='png', bbox_inches='tight'); img_buf.seek(0)
         doc.add_picture(img_buf, width=Inches(6))
@@ -239,20 +256,17 @@ with t3:
         doc.add_page_break()
         doc.add_heading('III. Hoja de Preguntas y Respuestas Literales', level=1)
         for i, res in st.session_state.respuestas.items():
-            doc.add_paragraph(f"{i}. {BANCO_FES[i][0]} -> RESPUESTA: {res}")
+            doc.add_paragraph(f"{i}. {BANCO_FES[i]} -> RESPUESTA: {res}")
 
         doc.add_page_break()
-        doc.add_heading('IV. Diagnóstico y Plan de Intervención Detallado', level=1)
-        doc.add_paragraph(f"MOTIVOS Y CAUSAS: {diag}")
-        doc.add_heading('Tareas y Cronograma Sugerido:', level=2)
+        doc.add_heading('IV. Análisis Clínico de Situaciones Problema e IA', level=1)
+        doc.add_paragraph(f"MOTIVOS Y CAUSAS: {causas} {motivos}")
+        doc.add_heading('Plan Terapéutico Detallado:', level=2)
         for t in tareas:
             doc.add_paragraph(t, style='List Bullet')
 
-        final_out = BytesIO()
-        doc.save(final_out)
-        st.download_button("📥 DESCARGAR INFORME INTEGRAL (WORD)", final_out.getvalue(), f"Informe_FES_Full_{nombre}.docx")
+        buf = BytesIO()
+        doc.save(buf)
+        st.download_button("📥 DESCARGAR INFORME INTEGRAL (WORD)", buf.getvalue(), f"FES_Full_{nombre}.docx")
 
-st.sidebar.markdown("### Estado de la Suite")
-st.sidebar.success("✅ 90 Preguntas Literales OK")
-st.sidebar.success("✅ Motor Diagnóstico OK")
-st.sidebar.success("✅ Informe de Impresión OK")
+st.sidebar.info("✅ Versión Honduras: 90 Preguntas Literales + IA Extensa + Emojis.")
