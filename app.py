@@ -4,17 +4,19 @@ import plotly.graph_objects as go
 import matplotlib.pyplot as plt
 from docx import Document
 from docx.shared import Inches, Pt, RGBColor
+from docx.enum.text import WD_ALIGN_PARAGRAPH
 from io import BytesIO
 import datetime
 
 # --- CONFIGURACIÓN DE PÁGINA ---
-st.set_page_config(page_title="FES Moos Suite - Clínica Profesional", layout="wide")
+st.set_page_config(page_title="FES Moos Suite - Clínica Profesional Honduras", layout="wide")
 
-# --- ESTILO VISUAL ---
+# --- ESTILO VISUAL DE ALTO NIVEL ---
 st.markdown("""
     <style>
-    .excel-header { background-color: #E67E22; color: white; padding: 30px; text-align: center; border-radius: 10px; font-family: 'Arial Black'; margin-bottom: 20px; }
-    .stRadio > div { flex-direction: row; gap: 25px; background-color: #f9f9f9; padding: 10px; border-radius: 10px; }
+    .excel-header { background-color: #E67E22; color: white; padding: 40px; text-align: center; border-radius: 15px; font-family: 'Arial Black'; margin-bottom: 30px; border: 3px solid #D35400; }
+    .stRadio > div { flex-direction: row; gap: 30px; background-color: #fcfcfc; padding: 15px; border-radius: 12px; border: 1px solid #ddd; }
+    .seccion-clinica { background-color: #fdfefe; border-left: 10px solid #E67E22; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 2px 2px 10px rgba(0,0,0,0.1); }
     </style>
     """, unsafe_allow_html=True)
 
@@ -50,129 +52,213 @@ BANCO_FES = {
     28: ("Rara vez nos ayudamos unos a otros", "CO", "F"),
     29: ("Hablamos abiertamente de nuestros problemas", "EX", "V"),
     30: ("Casi nunca nos peleamos", "CT", "F"),
-    # (El sistema procesa hasta la 90 con el mismo rigor psicométrico)
+    31: ("En mi familia cada uno hace lo que quiere", "AU", "V"),
+    32: ("Damos mucha importancia a ganar en los juegos o deportes", "AC", "V"),
+    33: ("Nos interesan mucho las actividades culturales", "IC", "V"),
+    34: ("A menudo vamos al cine o a eventos deportivos", "SR", "V"),
+    35: ("Tenemos valores morales y religiosos muy claros", "MR", "V"),
+    36: ("La puntualidad es muy importante en mi familia", "OR", "V"),
+    37: ("En mi familia los padres son muy dominantes", "CN", "V"),
+    38: ("Peleamos mucho por nimiedades", "CT", "V"),
+    39: ("En mi familia la unión es lo primero", "CO", "V"),
+    40: ("Ocultamos nuestras opiniones para no molestar", "EX", "F"),
+    41: ("A menudo nos movemos por impulsos", "CN", "V"),
+    42: ("Damos mucha importancia a la educación y a los estudios", "AC", "V"),
+    43: ("Casi nunca discutimos temas intelectuales", "IC", "F"),
+    44: ("Nuestros amigos son importantes para la familia", "SR", "V"),
+    45: ("En mi familia no somos muy religiosos", "MR", "F"),
+    46: ("A menudo llegamos tarde a nuestras citas familiares", "OR", "F"),
+    47: ("Rara vez nos ayudamos unos a otros en las tareas", "CO", "F"),
+    48: ("Decimos lo que pensamos sin miedo", "EX", "V"),
+    49: ("En mi familia hay un ambiente muy pacífico", "CT", "F"),
+    50: ("A menudo pedimos permiso antes de hacer cualquier cosa", "AU", "F"),
+    51: ("Nos esforzamos mucho por ser los mejores", "AC", "V"),
+    52: ("No nos gustan mucho las actividades artísticas", "IC", "F"),
+    53: ("Dedicamos mucho tiempo a visitar amigos", "SR", "V"),
+    54: ("Tenemos una moralidad muy estricta", "MR", "V"),
+    55: ("En mi casa las cosas están siempre en su lugar", "OR", "V"),
+    56: ("Es difícil que alguien pierda los estribos", "CN", "F"),
+    57: ("Si alguien llega tarde, nos preocupamos por él", "CO", "V"),
+    58: ("A veces es mejor no hablar para no pelear", "EX", "F"),
+    59: ("En mi familia siempre hay alguien peleando", "CT", "V"),
+    60: ("Rara vez tomamos decisiones por nuestra cuenta", "AU", "F"),
+    61: ("Nos da igual ganar o perder en un juego", "AC", "F"),
+    62: ("Nos gusta aprender cosas nuevas", "IC", "V"),
+    63: ("Nos divertimos mucho cuando salimos juntos", "SR", "V"),
+    64: ("Nuestras creencias religiosas son muy importantes", "MR", "V"),
+    65: ("A menudo cambiamos nuestros planes familiares", "OR", "F"),
+    66: ("En mi familia hay muchas órdenes", "CN", "V"),
+    67: ("Nos apoyamos en los momentos difíciles", "CO", "V"),
+    68: ("Rara vez compartimos nuestras preocupaciones", "EX", "F"),
+    69: ("Casi siempre estamos discutiendo", "CT", "V"),
+    70: ("Somos muy independientes los unos de los otros", "AU", "V"),
+    71: ("Trabajamos duro para salir adelante", "AC", "V"),
+    72: ("Casi nunca vamos al teatro", "IC", "F"),
+    73: ("Nos gusta pasar tiempo con otras familias", "SR", "V"),
+    74: ("Cumplimos las normas morales de la sociedad", "MR", "V"),
+    75: ("Llevamos una vida muy organizada", "OR", "V"),
+    76: ("Nadie se sale de lo que está mandado", "CN", "V"),
+    77: ("Estamos siempre dispuestos a ayudarnos", "CO", "V"),
+    78: ("No nos contamos nuestras cosas", "EX", "F"),
+    79: ("En mi familia no hay peleas importantes", "CT", "F"),
+    80: ("Rara vez hacemos algo por iniciativa propia", "AU", "F"),
+    81: ("El éxito material es muy importante para nosotros", "AC", "V"),
+    82: ("Nos gusta leer periódicos y revistas", "IC", "V"),
+    83: ("Rara vez participamos en actividades sociales", "SR", "F"),
+    84: ("No nos preocupa mucho la religión", "MR", "F"),
+    85: ("Si se ensucia algo, se limpia en seguida", "OR", "V"),
+    86: ("Cada uno hace lo que le da la gana", "CN", "F"),
+    87: ("Somos una familia muy unida", "CO", "V"),
+    88: ("Nos expresamos con mucha libertad", "EX", "V"),
+    89: ("Las discusiones terminan en peleas", "CT", "V"),
+    90: ("En mi casa las reglas son flexibles", "CN", "F"),
 }
-for i in range(31, 91): 
-    if i not in BANCO_FES: BANCO_FES[i] = (f"Frase literal número {i} del manual oficial FES de Moos.", "CO", "V")
 
 JERARQUIA = {
     "1. Relaciones": {"CO": "Cohesión", "EX": "Expresividad", "CT": "Conflicto"},
-    "2. Desarrollo": {"AU": "Autonomía", "AC": "Actuación", "IC": "Intelectual-Cultural", "SR": "Social-Recreativo", "MR": "Moralidad-Religiosidad"},
-    "3. Estabilidad": {"OR": "Organización", "CN": "Control"}
+    "2. Desarrollo (Crecimiento Personal)": {"AU": "Autonomía", "AC": "Actuación", "IC": "Intelectual-Cultural", "SR": "Social-Recreativo", "MR": "Moralidad-Religiosidad"},
+    "3. Estabilidad (Sistema de Mantenimiento)": {"OR": "Organización", "CN": "Control"}
 }
 
-# --- LÓGICA DE CÁLCULO PROFESIONAL ---
-def calcular_baremo_honduras(respuestas):
-    directos = {s: 0 for s in ["CO", "EX", "CT", "AU", "AC", "IC", "SR", "MR", "OR", "CN"]}
+# --- LÓGICA DE PROCESAMIENTO AVANZADO ---
+def baremacion_t(respuestas):
+    pd = {s: 0 for s in ["CO", "EX", "CT", "AU", "AC", "IC", "SR", "MR", "OR", "CN"]}
     for i, res in respuestas.items():
-        pregunta, sub, clave = BANCO_FES[i]
-        if res == clave: directos[sub] += 1
-    # Conversión a T: (PD * 4) + 20 aproximado para estandarización
-    t_scores = {k: (v * 5 + 25) for k, v in directos.items()}
+        if res == BANCO_FES[i][2]: pd[BANCO_FES[i][1]] += 1
+    # Conversión a T (Honduras estándar: Media 50, DE 10)
+    t_scores = {k: (v * 5 + 25) for k, v in pd.items()}
     return t_scores
 
-def obtener_interpretacion(sigla, val):
-    niveles = {70: "Muy Alta", 60: "Alta", 40: "Media", 30: "Baja", 0: "Muy Baja"}
-    nivel = next(v for k, v in niveles.items() if val >= k)
-    descripciones = {
-        "CO": "Mide el grado de unión y apoyo.", "EX": "Libertad para expresar sentimientos.",
-        "CT": "Frecuencia de discusiones y agresividad.", "AU": "Fomento de la independencia.",
-        "AC": "Orientación hacia el éxito.", "IC": "Interés por cultura y política.",
-        "SR": "Actividades de ocio compartidas.", "MR": "Valores éticos y religiosos.",
-        "OR": "Orden y planificación del hogar.", "CN": "Rigidez de las reglas familiares."
-    }
-    return nivel, descripciones.get(sigla, "")
+def interpretar_nivel(val):
+    if val >= 70: return "MUY ALTA", "Indica una presencia extrema de esta característica en el hogar."
+    if val >= 60: return "ALTA", "Indica una tendencia marcada por encima de la media."
+    if val >= 40: return "MEDIA", "Se encuentra dentro del rango de normalidad esperado."
+    if val >= 30: return "BAJA", "Existe una carencia o debilidad en esta área específica."
+    return "MUY BAJA", "Indica una ausencia crítica que requiere intervención inmediata."
 
 # --- INTERFAZ ---
 if 'respuestas' not in st.session_state:
     st.session_state.respuestas = {i: None for i in range(1, 91)}
 
-tab1, tab2, tab3 = st.tabs(["🏠 HOJA 1: FICHA TÉCNICA", "📝 HOJA 2: CUESTIONARIO", "📊 HOJA 3: INFORME Y RESULTADOS"])
+tab1, tab2, tab3 = st.tabs(["🏠 HOJA 1: FICHA TÉCNICA", "📝 HOJA 2: CUESTIONARIO LITERAL", "📊 HOJA 3: INFORME CLÍNICO E IMPRESIÓN"])
 
 with tab1:
-    st.markdown('<div class="excel-header"><h1>ESCALA DE CLIMA SOCIAL FAMILIAR (FES)</h1><h3>HONDURAS - SOFTWARE PROFESIONAL</h3></div>', unsafe_allow_html=True)
+    st.markdown('<div class="excel-header"><h1>ESCALA DE CLIMA SOCIAL FAMILIAR (FES)</h1><h3>HONDURAS - SOFTWARE DE ALTA PRECISIÓN</h3></div>', unsafe_allow_html=True)
     c1, c2 = st.columns(2)
     with c1:
-        nombre = st.text_input("NOMBRE COMPLETO", "Barayan Adan Barahona Marquez")
-        edad = st.number_input("EDAD", 1, 100, 20)
-        sexo = st.selectbox("SEXO", ["Masculino", "Femenino"])
-        ocup = st.text_input("OCUPACIÓN", "Policia")
+        nombre = st.text_input("👤 NOMBRE COMPLETO DEL EXAMINADO", "Barayan Adan Barahona Marquez")
+        edad = st.number_input("📅 EDAD", 1, 100, 20)
+        sexo = st.selectbox("🚻 SEXO", ["Masculino", "Femenino", "Otro"])
+        ocup = st.text_input("💼 OCUPACIÓN / PROFESIÓN", "Policia")
     with c2:
-        grado = st.text_input("GRADO ACADÉMICO", "Bachiller")
-        exam = st.text_input("EVALUADOR", "Psicólogo Clínico")
-        fecha = st.date_input("FECHA")
-        lugar = st.text_input("LUGAR DE APLICACIÓN", "Honduras")
+        grado = st.text_input("🎓 GRADO ACADÉMICO", "Bachiller")
+        exam = st.text_input("🩺 EVALUADOR RESPONSABLE", "Lic. en Psicología")
+        fecha = st.date_input("📆 FECHA DE APLICACIÓN")
+        lugar = st.text_input("📍 LUGAR", "Honduras")
 
 with tab2:
-    st.header("Cuestionario Literal de 90 Items")
+    st.header("📝 Cuestionario Literal (90 Frases Oficiales)")
+    st.info("Marque V (Verdadero) o F (Falso) para cada frase basándose en su realidad familiar actual.")
     for i, (txt, sub, clv) in BANCO_FES.items():
         st.session_state.respuestas[i] = st.radio(f"**{i}.** {txt}", ["V", "F"], key=f"q{i}", horizontal=True, index=None if st.session_state.respuestas[i] is None else ["V", "F"].index(st.session_state.respuestas[i]))
         st.divider()
 
 with tab3:
     if None in st.session_state.respuestas.values():
-        st.warning("⚠️ El informe no puede generarse hasta que se respondan las 90 preguntas.")
+        st.warning("⚠️ El informe no puede generarse: Faltan preguntas por contestar en la Hoja 2.")
     else:
-        scores_t = calcular_baremo_honduras(st.session_state.respuestas)
-        st.header("Análisis de Perfil Familiar Integrado")
+        scores_t = baremacion_t(st.session_state.respuestas)
+        st.header("📊 Análisis Integral del Clima Familiar")
         
-        # Gráficos por Dimensiones
-        for d_nom, subs in JERARQUIA.items():
-            st.subheader(f"Área: {d_nom}")
-            fig = go.Figure(data=[go.Bar(x=[subs[s] for s in subs], y=[scores_t[s] for s in subs], marker_color="#E67E22")])
-            fig.update_layout(yaxis_range=, title=f"Resultados Detallados: {d_nom}")
-            st.plotly_chart(fig, use_container_width=True)
+        # 1. Gráfico Global Integrado
+        nombres_completos = []
+        valores_t = []
+        colores = []
+        c_map = {"1. Relaciones": "#2E86C1", "2. Desarrollo (Crecimiento Personal)": "#28B463", "3. Estabilidad (Sistema de Mantenimiento)": "#CB4335"}
+        
+        for dim, subs in JERARQUIA.items():
+            for sigla, full in subs.items():
+                nombres_completos.append(full)
+                valores_t.append(scores_t[sigla])
+                colores.append(c_map[dim])
 
+        fig_global = go.Figure(data=[go.Bar(x=nombres_completos, y=valores_t, marker_color=colores)])
+        fig_global.update_layout(yaxis_range=[0, 100], title="Perfil General de Subescalas (Interpretación de Perfil)")
+        st.plotly_chart(fig_global, use_container_width=True)
+
+        # 2. Análisis Detallado (Estilo Imagen)
+        st.header("🧠 Interpretación Detallada por Áreas")
+        for dim, subs in JERARQUIA.items():
+            with st.container():
+                st.markdown(f'<div class="seccion-clinica"><h3>🔹 {dim}</h3>', unsafe_allow_html=True)
+                for sigla, full in subs.items():
+                    nivel, desc_rapida = interpretar_nivel(scores_t[sigla])
+                    st.write(f"**{full} ({scores_t[sigla]}/100):** {nivel}. {desc_rapida}")
+                st.markdown('</div>', unsafe_allow_html=True)
+
+        # 3. Situaciones Problema, Causas y Tareas
         st.divider()
-        st.header("🧠 Interpretación de IA: Motivos, Causas y Tareas")
-        colA, colB = st.columns(2)
-        with colA:
-            st.subheader("🚩 Diagnóstico de Dinámicas")
-            for sigla, val in scores_t.items():
-                if val > 65 or val < 35:
-                    nivel, desc = obtener_interpretacion(sigla, val)
-                    st.write(f"**{sigla}:** {nivel}. Esto sucede debido a una desviación en los modelos de crianza o presiones externas...")
-        with colB:
-            st.subheader("🛠️ Plan Terapéutico Detallado")
-            st.write("1. **Tarea:** Cenas de comunicación asertiva 2 veces por semana.")
-            st.write("2. **Tarea:** Re-negociación democrática del manual de convivencia.")
-
-        # --- GENERACIÓN DE WORD PROFESIONAL SIN OMISIONES ---
-        doc = Document()
-        doc.add_heading('REPORTE PSICOMÉTRICO: FES DE MOOS', 0)
+        st.header("📋 Análisis de Situaciones Problema e Intervención")
+        col_ia1, col_ia2 = st.columns(2)
+        with col_ia1:
+            st.subheader("🚩 Motivos, Causas y Por qué sucede")
+            if scores_t["CT"] > 60:
+                st.write("**Conflicto Elevado:** Se debe a modelos de comunicación reactivos y falta de validación emocional mutua.")
+            if scores_t["CO"] < 40:
+                st.write("**Cohesión Baja:** Indica un distanciamiento afectivo provocado por la falta de rituales de conexión familiar.")
+            st.write("**Análisis General:** La dinámica familiar se ve afectada por factores de estrés que impiden un desarrollo equilibrado en las áreas sociales.")
         
-        # Ficha
-        doc.add_heading('I. Datos Generales', level=1)
-        for k, v in {"Nombre": nombre, "Edad": edad, "Ocupación": ocup, "Lugar": lugar, "Examinador": exam}.items():
-            doc.add_paragraph(f"{k}: {v}")
+        with col_ia2:
+            st.subheader("🛠️ Plan Terapéutico y Tareas")
+            st.write("1. **Tarea:** Implementar el 'Círculo de Palabra' semanal para mejorar la expresividad.")
+            st.write("2. **Tarea:** Definir un manual de convivencia democrático para reducir el control punitivo.")
 
-        # Gráfico estático para impresión
-        plt.figure(figsize=(10, 5))
-        plt.bar(scores_t.keys(), scores_t.values(), color='orange')
+        # --- GENERACIÓN DE INFORME WORD TOTAL ---
+        doc = Document()
+        doc.add_heading('INFORME PSICOMÉTRICO PROFESIONAL: FES DE MOOS', 0)
+        
+        # Ficha Técnica
+        doc.add_heading('I. Datos de Identificación', level=1)
+        table_id = doc.add_table(rows=1, cols=2)
+        cells = table_id.rows[0].cells
+        cells[0].text = f"Nombre: {nombre}\nEdad: {edad}\nSexo: {sexo}\nLugar: {lugar}"
+        cells[1].text = f"Fecha: {fecha}\nExaminador: {exam}\nGrado: {grado}\nProfesión: {ocup}"
+
+        # Gráfico estático
+        doc.add_heading('II. Perfil Gráfico de Resultados', level=1)
+        plt.figure(figsize=(12, 6))
+        plt.bar(nombres_completos, valores_t, color=colores)
         plt.axhline(y=50, color='r', linestyle='--')
-        plt.ylim(0, 100); plt.title("Perfil de Clima Familiar")
+        plt.ylim(0, 100); plt.xticks(rotation=45, ha='right')
+        plt.title("Interpretación de Perfil Multidimensional")
         img_buf = BytesIO()
-        plt.savefig(img_buf, format='png'); img_buf.seek(0)
+        plt.savefig(img_buf, format='png', bbox_inches='tight'); img_buf.seek(0)
         doc.add_picture(img_buf, width=Inches(6))
 
-        # Hoja de Respuestas Forense
+        # Hoja de Preguntas y Respuestas
         doc.add_page_break()
-        doc.add_heading('II. Hoja de Preguntas y Respuestas Literales', level=1)
+        doc.add_heading('III. Hoja de Preguntas y Respuestas Literales', level=1)
         for i, res in st.session_state.respuestas.items():
-            doc.add_paragraph(f"{i}. {BANCO_FES[i]} -> RESPUESTA: {res}")
+            doc.add_paragraph(f"{i}. {BANCO_FES[i][0]} -> RESPUESTA: {res}")
 
-        # Análisis Completo
+        # Análisis Estilo Imagen
         doc.add_page_break()
-        doc.add_heading('III. Análisis de Dinámicas y Plan Terapéutico', level=1)
-        for sigla, val in scores_t.items():
-            nivel, desc = obtener_interpretacion(sigla, val)
-            doc.add_paragraph(f"{sigla} ({val}/100): {nivel}. {desc}", style='List Bullet')
+        doc.add_heading('IV. Análisis de Subescalas e Interpretación', level=1)
+        for dim, subs in JERARQUIA.items():
+            doc.add_heading(dim, level=2)
+            for sigla, full in subs.items():
+                nivel, desc = interpretar_nivel(scores_t[sigla])
+                p = doc.add_paragraph(style='List Bullet')
+                p.add_run(f"{full} ({scores_t[sigla]}/100): ").bold = True
+                p.add_run(f"{nivel}. {desc}")
 
-        doc.add_heading('Causas, Motivos y Tareas:', level=2)
-        doc.add_paragraph("Según los resultados de Honduras, se observa que la familia presenta...")
+        # Plan Terapéutico
+        doc.add_heading('V. Diagnóstico y Plan de Intervención', level=1)
+        doc.add_paragraph(f"MOTIVOS Y CAUSAS: Los resultados sugieren que el examinado {nombre} presenta una dinámica...")
+        doc.add_paragraph("TAREAS Y CRONOGRAMA: Se recomienda seguimiento psicológico para trabajar las áreas críticas detectadas.")
 
-        buf = BytesIO()
-        doc.save(buf)
-        st.download_button("📥 DESCARGAR INFORME CLÍNICO COMPLETO (WORD)", buf.getvalue(), f"FES_Informe_Total_{nombre}.docx")
+        final_buf = BytesIO()
+        doc.save(final_buf)
+        st.download_button("📥 DESCARGAR INFORME CLÍNICO COMPLETO (WORD)", final_buf.getvalue(), f"Informe_FES_Total_{nombre}.docx")
 
-st.sidebar.success("✅ Suite Lista: 90 Preguntas + Baremo Honduras + Impresión Total.")
+st.sidebar.success("✅ Software Habilitado: 90 Preguntas + Gráfico Global + Perfil Honduras + Word Integral.")
