@@ -5,6 +5,8 @@ import matplotlib.pyplot as plt
 from docx import Document
 from docx.shared import Inches, Pt, RGBColor
 from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.oxml.ns import qn
+from docx.oxml import OxmlElement
 from io import BytesIO
 import datetime
 
@@ -169,40 +171,40 @@ def nivel_pd(pd_val):
 
 def analizar_tipologia_familiar(raw):
     if raw["AC"] >= 7 and raw["CO"] >= 5:
-        return "Familia Orientada al Logro", "Se concluye que el sistema familiar es un entorno protector, definido como una 'Familia Orientada al Logro'. Existe alta motivación por el desarrollo personal y profesional, sostenida por una base afectiva sólida."
+        return "🏆 Familia Orientada al Logro", "Se concluye que el sistema familiar es un entorno protector, definido como una 'Familia Orientada al Logro'. Existe una alta motivación por el desarrollo personal y profesional, sostenida por una base afectiva sólida y estructurada."
     elif raw["CT"] >= 7 and raw["CO"] <= 4:
-        return "Familia con Dinámica de Conflicto", "Se concluye que el sistema familiar presenta una dinámica de alta tensión y conflicto. La falta de cohesión agrava la vulnerabilidad de sus miembros ante el estrés externo."
+        return "🌋 Familia con Dinámica de Conflicto", "Se concluye que el sistema familiar presenta una dinámica de alta tensión y conflicto constante. La falta de cohesión emocional agrava la vulnerabilidad de sus miembros ante los estresores externos de su entorno."
     elif raw["CN"] >= 7 and raw["OR"] >= 7:
-        return "Familia Rígidamente Estructurada", "Se concluye que el hogar opera bajo el modelo de 'Familia Estructurada'. El orden y la disciplina son pilares fundamentales, aunque podrían estar limitando la expresividad espontánea."
+        return "📋 Familia Rígidamente Estructurada", "Se concluye que el hogar opera bajo el modelo de 'Familia Estructurada'. El orden, el control y la disciplina son pilares fundamentales, aunque estas dinámicas podrían estar limitando la expresividad espontánea y emocional."
     elif raw["CO"] >= 7 and raw["SR"] >= 6:
-        return "Familia Integrada y Sociable", "Se concluye que el sistema es altamente funcional, definido como 'Familia Integrada'. Cuentan con excelentes redes de apoyo interno y externo."
+        return "🤝 Familia Integrada y Sociable", "Se concluye que el sistema es altamente funcional, definido como 'Familia Integrada'. Cuentan con excelentes redes de apoyo interno y externo, facilitando la resiliencia grupal."
     else:
-        return "Familia en Desarrollo de Adaptación", "Se concluye que el sistema familiar se encuentra en una fase de adaptación, mostrando fortalezas y áreas de mejora mixtas dependientes del estresor actual o de la etapa del ciclo vital."
+        return "🌱 Familia en Desarrollo de Adaptación", "Se concluye que el sistema familiar se encuentra en una fase de adaptación y transición. Muestran fortalezas operativas mixtas que dependen altamente de la etapa del ciclo vital o del estresor actual que enfrentan."
 
 def generar_narrativa_dimensiones(raw):
     # A. RELACIONES
-    rel_co = "alta cohesión emocional. Existe un fuerte sentimiento de pertenencia y apoyo mutuo entre los miembros." if raw["CO"] >= 6 else ("baja cohesión emocional, indicando un distanciamiento y desvinculación." if raw["CO"] <= 3 else "cohesión emocional promedio, con un apoyo mutuo funcional.")
-    rel_ex = "La expresividad es alta, lo que indica que se permite la comunicación de sentimientos de manera abierta." if raw["EX"] >= 6 else ("La expresividad es limitada, sugiriendo dificultad para la comunicación abierta de sentimientos." if raw["EX"] <= 3 else "La expresividad es moderada, permitiendo comunicación en áreas seguras.")
-    rel_ct = "El nivel de conflicto es elevado, sugiriendo un entorno de tensión y discusiones constantes." if raw["CT"] >= 6 else ("El nivel de conflicto es mínimo, sugiriendo un entorno pacífico y de resolución constructiva." if raw["CT"] <= 3 else "El conflicto se maneja dentro de los parámetros habituales.")
-    texto_a = f"El/la evaluado/a percibe un clima familiar de {rel_co} {rel_ex} {rel_ct}"
+    rel_co = "🫂 alta cohesión emocional. Existe un fuerte sentimiento de pertenencia, lealtad y apoyo mutuo entre los miembros, sirviendo como un pilar protector." if raw["CO"] >= 6 else ("🧊 baja cohesión emocional, indicando un distanciamiento y una desvinculación afectiva que puede generar aislamiento." if raw["CO"] <= 3 else "🤝 cohesión emocional promedio, mostrando un apoyo mutuo funcional y adaptativo en el día a día.")
+    rel_ex = "🗣️ La expresividad es alta, lo que indica que se fomenta y permite la comunicación de sentimientos e ideas de manera abierta y sin temor a represalias." if raw["EX"] >= 6 else ("🤐 La expresividad es limitada, sugiriendo dificultad o resistencia para la comunicación abierta de sentimientos profundos." if raw["EX"] <= 3 else "💬 La expresividad es moderada, permitiendo comunicación fluida principalmente en áreas seguras y cotidianas.")
+    rel_ct = "🌋 El nivel de conflicto es elevado, sugiriendo un entorno con altos índices de tensión, hostilidad y discusiones constantes." if raw["CT"] >= 6 else ("🕊️ El nivel de conflicto es mínimo, sugiriendo un entorno sumamente pacífico, tolerante y orientado a la resolución constructiva." if raw["CT"] <= 3 else "⚖️ El conflicto se maneja dentro de los parámetros habituales, con discusiones normativas.")
+    texto_a = f"El/la evaluado/a percibe un clima familiar caracterizado por {rel_co} {rel_ex} {rel_ct}"
 
     # B. DESARROLLO
-    des_ac = f"altamente orientada a la actuación y el éxito. Existe una presión significativa por cumplir metas (Actuación: {raw['AC']}/9)." if raw["AC"] >= 6 else f"con expectativas de éxito equilibradas (Actuación: {raw['AC']}/9)."
-    des_ocio = f"Esto influye en una disminución de actividades Sociales-Recreativas y Culturales, las cuales se perciben como secundarias o descuidadas frente a las obligaciones." if (raw["SR"] <= 4 and raw["AC"] >= 6) else "Mantienen un sano interés en actividades de ocio y cultura como complemento a sus obligaciones."
+    des_ac = f"📈 altamente orientada a la actuación y el éxito. Existe una presión significativa por cumplir metas académicas, laborales y sociales (Actuación: {raw['AC']}/9)." if raw["AC"] >= 6 else f"🎯 con expectativas de éxito equilibradas, sin ejercer presiones desmedidas (Actuación: {raw['AC']}/9)."
+    des_ocio = f"⚠️ Esto influye en una notoria disminución de actividades Sociales-Recreativas y Culturales, las cuales se perciben como secundarias o se descuidan frente a las fuertes obligaciones de rendimiento." if (raw["SR"] <= 4 and raw["AC"] >= 6) else "🎨 Mantiene un sano y activo interés en actividades de ocio, recreación y cultura, sirviendo como un excelente complemento a sus obligaciones diarias."
     texto_b = f"El perfil muestra una familia {des_ac} {des_ocio}"
 
     # C. ESTABILIDAD
-    est_or = "sólida. Las tareas y responsabilidades están bien definidas y planificadas." if raw["OR"] >= 6 else "flexible o inestructurada, con baja planificación de la rutina diaria."
-    est_cn = "El control es alto, denotando un sistema de reglas estricto que podría llegar a ser autoritario." if raw["CN"] >= 7 else ("El control es moderado, lo que indica que existen reglas claras pero estas no llegan a ser autoritarias ni rígidas, permitiendo un margen de libertad personal." if raw["CN"] >= 4 else "El control es bajo, sugiriendo alta permisividad en el hogar.")
+    est_or = "📋 sólida y robusta. Las tareas, jerarquías y responsabilidades están muy bien definidas y cuidadosamente planificadas." if raw["OR"] >= 6 else "🌪️ flexible o inestructurada, evidenciando una baja planificación de la rutina diaria y roles difusos."
+    est_cn = "⛓️ El control es alto, denotando un sistema de reglas estricto que rige el comportamiento y podría llegar a percibirse como autoritario." if raw["CN"] >= 7 else ("⚖️ El control es moderado, lo que indica que existen reglas claras pero estas no llegan a ser autoritarias ni rígidas, permitiendo un sano margen de libertad personal y negociación." if raw["CN"] >= 4 else "🔓 El control es bajo, sugiriendo una alta permisividad en la gestión del hogar.")
     texto_c = f"El hogar presenta una organización {est_or} {est_cn}"
 
     # RECOMENDACIONES BASE
     recs = []
-    if raw["AC"] >= 7: recs.extend(["Fomentar espacios de ocio y recreación familiar que no estén ligados a la productividad o el estudio.", "Equilibrar las demandas de 'Actuación' con intereses culturales o artísticos para un desarrollo integral."])
-    if raw["CT"] >= 6: recs.append("Implementar técnicas de resolución pacífica de conflictos para evitar escaladas de tensión en el hogar.")
-    if raw["CO"] <= 3: recs.append("Establecer rutinas de conexión familiar (Ej. cenas sin dispositivos, salidas conjuntas) para fortalecer el vínculo afectivo.")
-    if raw["EX"] <= 3: recs.append("Promover la asertividad y la validación emocional, permitiendo que cada miembro exprese sus frustraciones sin temor a juicios.")
-    if not recs: recs.append("Mantener las pautas de crianza y comunicación actuales, reforzando positivamente el apoyo mutuo.")
+    if raw["AC"] >= 7: recs.extend(["Fomentar activamente espacios de ocio y recreación familiar que NO estén ligados a la productividad, la competencia o el rendimiento académico/laboral.", "Equilibrar las altas demandas de 'Actuación' con intereses puramente culturales o artísticos para garantizar un desarrollo psicológico integral."])
+    if raw["CT"] >= 6: recs.append("Implementar de manera urgente técnicas de resolución pacífica de conflictos y desactivación fisiológica (Ej. tiempo fuera) para evitar escaladas de tensión y agresividad en el hogar.")
+    if raw["CO"] <= 3: recs.append("Establecer rutinas innegociables de conexión familiar (Ej. cenas compartidas sin dispositivos móviles, salidas conjuntas de fin de semana) para reconstruir y fortalecer el vínculo afectivo.")
+    if raw["EX"] <= 3: recs.append("Promover talleres o prácticas de asertividad y validación emocional familiar, permitiendo que cada miembro exprese sus miedos y frustraciones sin temor a juicios morales o castigos.")
+    if not recs: recs.append("Mantener y proteger las pautas de crianza, normatividad y comunicación actuales, reforzando positivamente el apoyo mutuo y la estabilidad lograda.")
     
     return texto_a, texto_b, texto_c, recs
 
@@ -220,7 +222,16 @@ with st.sidebar:
     lugar = st.text_input("Sede / Jurisdicción", "Sanidad Policial - Honduras")
     exam = st.text_input("Examinador", "Lic. en Psicología")
     fecha = st.date_input("Fecha de Evaluación", datetime.date.today())
+    
     st.divider()
+    
+    # --- BOTÓN DE NUEVO LLENADO ---
+    st.warning("⚙️ Controles del Sistema")
+    if st.button("🔄 NUEVO LLENADO / LIMPIAR DATOS", type="primary", use_container_width=True):
+        st.session_state.respuestas = {i: None for i in range(1, 91)}
+        st.rerun()
+        
+    st.info("💡 **Instrucciones:** Llene los datos, evalúe el cuestionario y luego exporte su informe clínico oficial.")
 
 tab_test, tab_results = st.tabs(["📝 1. CUESTIONARIO FES", "📊 2. RESULTADOS E INFORME"])
 
@@ -270,9 +281,7 @@ if None not in st.session_state.respuestas.values():
         df_puntos = pd.DataFrame(data_puntos)
         st.dataframe(df_puntos, hide_index=True, use_container_width=True)
 
-        # ----------------------------------------------------------------------
-        # SOLUCIÓN DEL ERROR TYPEERROR EN LA GRÁFICA
-        # ----------------------------------------------------------------------
+        # VISUALIZACIÓN STREAMLIT: GRÁFICA
         names_full = []
         values_t = []
         colors_dim = []
@@ -288,9 +297,8 @@ if None not in st.session_state.respuestas.values():
         fig = go.Figure(data=[go.Bar(x=names_full, y=values_t, marker_color=colors_dim)])
         fig.update_layout(yaxis_range=[0, 100], title="Perfil de T-Scores", height=350, margin=dict(t=40, b=0))
         st.plotly_chart(fig, use_container_width=True)
-        # ----------------------------------------------------------------------
 
-        # VISUALIZACIÓN STREAMLIT: INTERPRETACIÓN DE RESULTADOS IA
+        # VISUALIZACIÓN STREAMLIT: INTERPRETACIÓN DE RESULTADOS IA (CON EMOJIS)
         st.markdown(f"""
         <div class="card-analisis">
             <h2>4. INTERPRETACIÓN DE RESULTADOS</h2>
@@ -303,14 +311,14 @@ if None not in st.session_state.respuestas.values():
         </div>
         <div class="card-recomendaciones">
             <h2>5. CONCLUSIONES Y RECOMENDACIONES</h2>
-            <p><b>Diagnóstico: {tipo_titulo}</b><br>{conclusion_narrativa}</p>
-            <p><b>Recomendaciones:</b></p>
+            <p><b>Diagnóstico Tipológico: {tipo_titulo}</b><br>{conclusion_narrativa}</p>
+            <p><b>Recomendaciones Terapéuticas/Preventivas:</b></p>
             <ul>{''.join([f'<li>{r}</li>' for r in recomendaciones])}</ul>
         </div>
         """, unsafe_allow_html=True)
 
         # --- GENERADOR DE WORD ---
-        st.markdown("<h2 class='seccion-titulo'>💾 EXPORTACIÓN OFICIAL</h2>", unsafe_allow_html=True)
+        st.markdown("<h2 class='seccion-titulo'>💾 EXPORTACIÓN OFICIAL AL EXPEDIENTE</h2>", unsafe_allow_html=True)
         
         doc = Document()
         style = doc.styles['Normal']
@@ -319,7 +327,7 @@ if None not in st.session_state.respuestas.values():
         font.size = Pt(11)
 
         # TÍTULO DEL DOCUMENTO
-        doc.add_heading('INFORME CLÍNICO - ESCALA FES DE MOOS', 0).alignment = WD_ALIGN_PARAGRAPH.CENTER
+        doc.add_heading('INFORME CLÍNICO PERICIAL - ESCALA FES DE MOOS', 0).alignment = WD_ALIGN_PARAGRAPH.CENTER
         
         # 1. FICHA TÉCNICA
         doc.add_heading('1. FICHA TÉCNICA', level=1)
@@ -381,7 +389,7 @@ if None not in st.session_state.respuestas.values():
 
         doc.add_page_break()
 
-        # 4. INTERPRETACIÓN DE RESULTADOS
+        # 4. INTERPRETACIÓN DE RESULTADOS (INCLUYE EMOJIS)
         doc.add_heading('4. INTERPRETACIÓN DE RESULTADOS', level=1)
         doc.add_heading('A. Dimensión de Relaciones', level=2)
         doc.add_paragraph(txt_a)
@@ -393,9 +401,10 @@ if None not in st.session_state.respuestas.values():
         # 5. CONCLUSIONES Y RECOMENDACIONES
         doc.add_heading('5. CONCLUSIONES Y RECOMENDACIONES', level=1)
         p_diag = doc.add_paragraph()
+        p_diag.add_run(f"Diagnóstico Tipológico: {tipo_titulo}\n").bold = True
         p_diag.add_run(conclusion_narrativa)
         
-        doc.add_paragraph("\nRecomendaciones Terapéuticas:")
+        doc.add_paragraph("\nRecomendaciones Terapéuticas/Preventivas:")
         for r in recomendaciones:
             doc.add_paragraph(r, style='List Bullet')
 
