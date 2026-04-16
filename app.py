@@ -8,16 +8,10 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 from io import BytesIO
 import datetime
 
-# =====================================================================
-# PLANTILLA REUTILIZABLE PARA FUTUROS TESTS PSICOMÉTRICOS
-# Para adaptar a otro test, solo modifique las secciones: 
-# 1. BANCO_FES (Preguntas) 
-# 2. JERARQUIA (Dimensiones)
-# 3. BAREMOS_T (Tabla de Conversión)
-# =====================================================================
-
+# --- CONFIGURACIÓN DE ALTO NIVEL ---
 st.set_page_config(page_title="FES Moos Suite - Sanidad Policial", page_icon="🧠", layout="wide")
 
+# --- ESTILO VISUAL DINÁMICO ---
 st.markdown("""
     <style>
     .main { background-color: #f4f7f6; }
