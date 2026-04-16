@@ -8,7 +8,7 @@ from io import BytesIO
 import datetime
 
 # --- CONFIGURACIÓN DE ALTO NIVEL ---
-st.set_page_config(page_title="FES Moos Suite - Clínica Profesional", page_icon="🧠", layout="wide")
+st.set_page_config(page_title="FES Moos Suite - Sanidad Policial", page_icon="🧠", layout="wide")
 
 # --- ESTILO VISUAL DINÁMICO ---
 st.markdown("""
@@ -23,6 +23,10 @@ st.markdown("""
         background-color: white; padding: 25px; border-radius: 10px; 
         border-top: 8px solid #1E3A8A; box-shadow: 0 4px 8px rgba(0,0,0,0.1); 
         margin-bottom: 20px; 
+    }
+    .card-recomendaciones { 
+        background-color: #E8F4F8; padding: 25px; border-radius: 10px; 
+        border-left: 8px solid #28B463; margin-bottom: 20px; 
     }
     </style>
     """, unsafe_allow_html=True)
@@ -143,45 +147,53 @@ JERARQUIA = {
 
 # --- FUNCIONES CLÍNICAS Y DE CÁLCULO ---
 def calcular_puntuaciones(respuestas):
-    # Inicializar contadores en 0
     raw_scores = {sigla: 0 for subs in JERARQUIA.values() for sigla in subs.keys()}
     
-    # Calcular Puntaje Directo (Raw Score)
     for i, (txt, sigla, clave) in BANCO_FES.items():
         if respuestas.get(i) == clave:
             raw_scores[sigla] += 1
             
-    # Conversión Simulada a Puntaje T (Para uso real, ajustar según baremos de la región)
-    # Nota: Aquí uso una fórmula base para visualización. 
     t_scores = {}
     for sigla, pts in raw_scores.items():
-        t_scores[sigla] = min(max(int((pts * 7.5) + 20), 0), 100) # Simulación de T-Score
+        t_scores[sigla] = min(max(int((pts * 7.5) + 20), 0), 100) 
         
     return raw_scores, t_scores
 
-def realizar_analisis_ia(pt, nombre):
-    causas, motivos, tareas = "", "", []
+def realizar_analisis_clinico(pt, nombre):
+    diagnostico = ""
+    conclusiones = f"Basado en los resultados de la Escala de Clima Social Familiar (FES), el núcleo familiar del evaluado presenta un sistema "
+    recomendaciones = []
     
-    # Análisis Relaciones
-    if pt["CT"] > 60:
-        causas += "🌋 **Motivo del Conflicto:** Se detecta una dinámica de alta reactividad. "
-        motivos += "Posiblemente derivado de estrés ambiental u ocupacional severo que se desplaza al entorno familiar. "
-        tareas.append("🚩 Tarea: Implementar técnicas de desactivación fisiológica antes de abordar discusiones.")
-    elif pt["CO"] < 40:
-        causas += "🧊 **Distanciamiento Afectivo:** Baja cohesión familiar. "
-        motivos += "Los miembros operan como unidades aisladas debido a rutinas incompatibles o conflictos no resueltos. "
-        tareas.append("🤝 Tarea: Establecer una 'hora familiar' innegociable a la semana sin dispositivos electrónicos.")
-    else:
-        causas += "🕊️ **Armonía Relacional:** Existe un flujo de comunicación saludable. "
-        motivos += "Se basa en el respeto mutuo y la capacidad de ceder ante las necesidades del otro. "
+    # Análisis Diagnóstico y Conclusiones dinámicas
+    if pt["CT"] >= 60:
+        diagnostico += "🌋 **Alto Conflicto:** Se detecta una dinámica de reactividad verbal o conductual. Posiblemente derivado de estrés ambiental u ocupacional severo. "
+        conclusiones += "caracterizado por una alta incidencia de conflictos, donde la expresión de la ira y la agresividad limitan la armonía del hogar. "
+        recomendaciones.append("Derivación a terapia familiar sistémica o consejería matrimonial para mediación de conflictos.")
+        recomendaciones.append("Implementar técnicas de desactivación fisiológica y 'tiempo fuera' antes de abordar discusiones intensas.")
+    
+    if pt["CO"] <= 40:
+        diagnostico += "🧊 **Baja Cohesión:** Distanciamiento afectivo. Los miembros operan como unidades aisladas debido a rutinas incompatibles o falta de interés compartido. "
+        conclusiones += "Se observa un déficit en la cohesión y el apoyo mutuo, indicando un distanciamiento emocional entre los miembros. "
+        recomendaciones.append("Fomentar de manera proactiva espacios de ocio compartido (Ej. una 'hora familiar' innegociable a la semana).")
+    
+    if pt["CN"] >= 65:
+        diagnostico += "⛓️ **Exceso de Control:** El sistema normativo es rígido. Común en dinámicas donde figuras de autoridad proyectan protocolos estrictos al hogar. "
+        conclusiones += "Existe una marcada rigidez en la estructura y el control, lo cual puede estar asfixiando la autonomía individual. "
+        recomendaciones.append("Flexibilizar las normativas del hogar, permitiendo que las reglas se negocien de acuerdo a la edad de los hijos.")
+    
+    if pt["EX"] <= 40:
+        recomendaciones.append("Entrenamiento en asertividad y comunicación emocional para facilitar la expresión segura de sentimientos.")
 
-    # Análisis Estabilidad
-    if pt["CN"] > 65:
-        causas += "⛓️ **Rigidez Estructural:** El sistema de control es asfixiante. "
-        motivos += "Común en dinámicas donde figuras de autoridad proyectan protocolos estrictos (ej. laborales/policiales) al hogar. "
-        tareas.append("🗝️ Tarea: Delegar decisiones de bajo riesgo a los menores/otros miembros para fomentar autonomía.")
-    
-    return causas, motivos, tareas
+    # Conclusión general si no hay alertas críticas
+    if pt["CT"] < 60 and pt["CO"] > 40 and pt["CN"] < 65:
+        diagnostico += "🕊️ **Equilibrio Normativo:** El flujo de comunicación y normatividad es adecuado y adaptativo. "
+        conclusiones += "equilibrado, con niveles adecuados de apoyo mutuo y una estructura de reglas que favorece el desarrollo de sus miembros. "
+        recomendaciones.append("Continuar fortaleciendo los canales de comunicación actuales.")
+        recomendaciones.append("Promover el desarrollo de actividades culturales e intelectuales conjuntas para mantener la vitalidad del sistema familiar.")
+        
+    conclusiones += "Es importante contextualizar estos hallazgos con las exigencias del entorno socio-laboral del paciente."
+
+    return diagnostico, conclusiones, recomendaciones
 
 def nivel_cualitativo(val):
     if val >= 70: return "Muy Alta"
@@ -194,14 +206,14 @@ def nivel_cualitativo(val):
 if 'respuestas' not in st.session_state:
     st.session_state.respuestas = {i: None for i in range(1, 91)}
 
-st.markdown('<div class="excel-header"><h1>ESCALA DE CLIMA SOCIAL FAMILIAR (FES)</h1><h3>Plataforma de Evaluación Clínica Profesional</h3></div>', unsafe_allow_html=True)
+st.markdown('<div class="excel-header"><h1>ESCALA DE CLIMA SOCIAL FAMILIAR (FES)</h1><h3>Plataforma de Evaluación - Sanidad Policial</h3></div>', unsafe_allow_html=True)
 
 # SIDEBAR PARA METADATOS
 with st.sidebar:
     st.header("👤 Ficha Técnica")
     nombre = st.text_input("Paciente", "Ej. Funcionario Policial X")
     edad = st.number_input("Edad", 18, 80, 30)
-    ocup = st.text_input("Ocupación", "Sub-Inspector / Funcionario")
+    ocup = st.text_input("Ocupación / Rango", "Sub-Inspector")
     lugar = st.text_input("Sede / Jurisdicción", "Sanidad Policial - Honduras")
     exam = st.text_input("Examinador", "Lic. en Psicología")
     fecha = st.date_input("Fecha de Evaluación", datetime.date.today())
@@ -209,13 +221,12 @@ with st.sidebar:
     st.divider()
     st.info("💡 **Instrucciones:** Llene los datos en este panel lateral y proceda a la pestaña de Cuestionario.")
 
-tab_test, tab_results = st.tabs(["📝 CUESTIONARIO (90 ÍTEMS)", "🧠 ANÁLISIS DE RESULTADOS"])
+tab_test, tab_results = st.tabs(["📝 CUESTIONARIO (90 ÍTEMS)", "🧠 ANÁLISIS Y CONCLUSIONES"])
 
 with tab_test:
     st.subheader("Cuestionario FES - Forma R")
     st.write("Marque 'V' (Verdadero) o 'F' (Falso) para cada una de las siguientes afirmaciones.")
     
-    # Dividir en columnas para no hacer scroll infinito
     col1, col2 = st.columns(2)
     for i, (txt, sub, clv) in BANCO_FES.items():
         target_col = col1 if i <= 45 else col2
@@ -234,10 +245,9 @@ with tab_results:
         faltantes = [k for k, v in st.session_state.respuestas.items() if v is None]
         st.warning(f"⚠️ Faltan preguntas por contestar. Por favor complete los siguientes ítems: {faltantes[:5]}...")
     else:
-        # Calcular Puntuaciones Reales
         raw_scores, pt_scores = calcular_puntuaciones(st.session_state.respuestas)
 
-        # 1. GRÁFICO INTEGRAL GLOBAL
+        # 1. GRÁFICO
         names_full, values_t, colors_dim = [], [], []
         c_map = {"1. Relaciones": "#E67E22", "2. Desarrollo (Crecimiento personal)": "#28B463", "3. Estabilidad (Sistema de mantenimiento)": "#2E86C1"}
         
@@ -251,8 +261,8 @@ with tab_results:
         fig.update_layout(yaxis_range=[0, 100], title="Interpretación del Perfil Familiar Integrado (T-Scores)")
         st.plotly_chart(fig, use_container_width=True)
 
-        # 2. RESUMEN DE PUNTUACIONES
-        st.header("📋 Resumen de Puntuaciones (Interpretación de Perfil)")
+        # 2. RESUMEN
+        st.header("📋 Resumen de Puntuaciones")
         col_res1, col_res2, col_res3 = st.columns(3)
         cols_ref = [col_res1, col_res2, col_res3]
         
@@ -261,30 +271,36 @@ with tab_results:
                 st.subheader(f"{dim.split('.')[1]}")
                 for sigla, (n_full, desc) in subs.items():
                     nivel = nivel_cualitativo(pt_scores[sigla])
-                    st.markdown(f"**{n_full} ({pt_scores[sigla]}/100):** *{nivel}*. {desc}")
+                    st.markdown(f"**{n_full} ({pt_scores[sigla]}):** *{nivel}*. {desc}")
 
-        # 3. ANÁLISIS DE IA
-        causas, motivos, tareas = realizar_analisis_ia(pt_scores, nombre)
+        # 3. ANÁLISIS, CONCLUSIONES Y RECOMENDACIONES DE IA
+        diagnostico, conclusiones, recomendaciones = realizar_analisis_clinico(pt_scores, nombre)
+        
         st.markdown(f"""
         <div class="card-analisis">
-            <h2>🧠 Diagnóstico y Plan de Intervención Clínico</h2>
-            <p><b>🔍 ETIOLOGÍA Y DINÁMICA:</b> {causas} {motivos}</p>
+            <h2>🧠 Diagnóstico Clínico Automatizado</h2>
+            <p>{diagnostico}</p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        st.markdown(f"""
+        <div class="card-recomendaciones">
+            <h2>📌 Conclusiones</h2>
+            <p>{conclusiones}</p>
             <hr>
-            <h3>📅 PLAN TERAPÉUTICO SUGERIDO:</h3>
-            <ul>{''.join([f'<li>{t}</li>' for t in tareas])}</ul>
+            <h3>✅ Recomendaciones Terapéuticas</h3>
+            <ul>{''.join([f'<li>{r}</li>' for r in recomendaciones])}</ul>
         </div>
         """, unsafe_allow_html=True)
 
-        # --- BOTONES DE EXPORTACIÓN ---
+        # --- EXPORTACIÓN ---
         st.divider()
         st.subheader("💾 Exportación de Datos")
-        
         col_btn1, col_btn2 = st.columns(2)
         
         with col_btn1:
-            # GENERACIÓN DE INFORME WORD
             doc = Document()
-            titulo = doc.add_heading('INFORME CLÍNICO FES DE MOOS', 0)
+            titulo = doc.add_heading('INFORME PSICOLÓGICO FES DE MOOS', 0)
             titulo.alignment = 1
 
             doc.add_heading('I. Ficha Técnica', level=1)
@@ -302,55 +318,46 @@ with tab_results:
             plt.savefig(img_buf, format='png', bbox_inches='tight')
             img_buf.seek(0)
             doc.add_picture(img_buf, width=Inches(6))
-            plt.close() # Cierra el plot para ahorrar memoria
+            plt.close()
 
-            # SECCIÓN: RESUMEN DE PUNTUACIONES EN WORD
             doc.add_heading('III. Resumen de Puntuaciones', level=1)
             for dim_nombre, subescalas in JERARQUIA.items():
-                doc.add_heading(f"🔹 {dim_nombre}", level=2)
+                doc.add_heading(f"{dim_nombre.split('.')[1].strip()}", level=2)
                 for sigla, (nombre_completo, descripcion) in subescalas.items():
                     punto_t = pt_scores[sigla]
                     nivel = nivel_cualitativo(punto_t)
                     p = doc.add_paragraph(style='List Bullet')
-                    run_nombre = p.add_run(f"{nombre_completo} ({punto_t}/100): ")
-                    run_nombre.bold = True
-                    run_nivel = p.add_run(f"{nivel}. ")
-                    run_nivel.italic = True
+                    p.add_run(f"{nombre_completo} ({punto_t}): ").bold = True
+                    p.add_run(f"{nivel}. ").italic = True
                     p.add_run(descripcion)
 
-            # SECCIÓN: HOJA DE RESPUESTAS LITERALES
             doc.add_page_break()
-            doc.add_heading('IV. Respuestas Literales del Paciente', level=1)
-            for i, res in st.session_state.respuestas.items():
-                pregunta_texto = BANCO_FES[i][0] # Solo extrae el texto, no la tupla completa
-                doc.add_paragraph(f"{i}. {pregunta_texto} -> RESPUESTA: {res}")
-
-            # SECCIÓN: IA
-            doc.add_page_break()
-            doc.add_heading('V. Análisis Clínico de Situaciones Problema', level=1)
-            p_diag = doc.add_paragraph()
-            p_diag.add_run("🔍 MOTIVOS Y CAUSAS: ").bold = True
-            p_diag.add_run(f"{causas} {motivos}")
+            doc.add_heading('IV. Conclusiones Clínicas', level=1)
+            doc.add_paragraph(conclusiones)
             
-            doc.add_heading('Plan Terapéutico Detallado:', level=2)
-            for t in tareas:
-                doc.add_paragraph(t, style='List Bullet')
+            doc.add_heading('V. Recomendaciones y Plan de Intervención', level=1)
+            for r in recomendaciones:
+                doc.add_paragraph(r, style='List Bullet')
 
-            # FIRMA
+            doc.add_page_break()
+            doc.add_heading('VI. Anexo: Respuestas Literales', level=1)
+            for i, res in st.session_state.respuestas.items():
+                pregunta_texto = BANCO_FES[i][0]
+                doc.add_paragraph(f"{i}. {pregunta_texto} -> {res}")
+
             doc.add_paragraph("\n\n\n" + "_"*40)
             p_firma = doc.add_paragraph(f"{exam}\n{lugar}")
             p_firma.alignment = 1
 
             buf = BytesIO()
             doc.save(buf)
-            st.download_button("📥 DESCARGAR INFORME CLÍNICO (WORD)", buf.getvalue(), f"FES_{nombre.replace(' ', '_')}.docx", type="primary")
+            st.download_button("📥 DESCARGAR INFORME CLÍNICO (WORD)", buf.getvalue(), f"Informe_FES_{nombre.replace(' ', '_')}.docx", type="primary")
 
         with col_btn2:
-            # EXPORTAR BASE DE DATOS A CSV
             data_export = {"Fecha": fecha, "Paciente": nombre, "Edad": edad, "Sede": lugar}
             data_export.update({f"Item_{k}": v for k, v in st.session_state.respuestas.items()})
-            data_export.update({f"TScore_{k}": v for k, v in pt_scores.items()})
+            data_export.update({f"Puntaje_{k}": v for k, v in pt_scores.items()})
             
             df_export = pd.DataFrame([data_export])
             csv = df_export.to_csv(index=False).encode('utf-8')
-            st.download_button("📊 EXPORTAR DATOS A EXCEL/CSV", csv, f"Data_FES_{nombre.replace(' ', '_')}.csv")
+            st.download_button("📊 EXPORTAR BASE DE DATOS (CSV)", csv, f"Data_FES_{nombre.replace(' ', '_')}.csv")
