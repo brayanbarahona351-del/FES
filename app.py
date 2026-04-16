@@ -5,8 +5,6 @@ import matplotlib.pyplot as plt
 from docx import Document
 from docx.shared import Inches, Pt, RGBColor
 from docx.enum.text import WD_ALIGN_PARAGRAPH
-from docx.oxml.ns import qn
-from docx.oxml import OxmlElement
 from io import BytesIO
 import datetime
 
@@ -34,6 +32,7 @@ st.markdown("""
         margin-bottom: 25px; 
     }
     .stDataFrame { border-radius: 10px; overflow: hidden; box-shadow: 0 4px 8px rgba(0,0,0,0.05); }
+    .matriz-item { font-weight: bold; color: #0B3B60; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -151,11 +150,16 @@ JERARQUIA = {
     }
 }
 
+# --- INICIALIZACIÓN DE ESTADO SEGURA ---
+for i in range(1, 91):
+    if f"q{i}" not in st.session_state:
+        st.session_state[f"q{i}"] = None
+
 # --- FUNCIONES CLÍNICAS ---
-def calcular_puntuaciones(respuestas):
+def calcular_puntuaciones(resp_dict):
     raw_scores = {sigla: 0 for subs in JERARQUIA.values() for sigla in subs.keys()}
     for i, (txt, sigla, clave) in BANCO_FES.items():
-        if respuestas.get(i) == clave:
+        if resp_dict.get(i) == clave:
             raw_scores[sigla] += 1
             
     # Conversión Simulada a T-Scores
@@ -191,7 +195,7 @@ def generar_narrativa_dimensiones(raw):
     # B. DESARROLLO
     des_ac = f"📈 altamente orientada a la actuación y el éxito. Existe una presión significativa por cumplir metas académicas, laborales y sociales (Actuación: {raw['AC']}/9)." if raw["AC"] >= 6 else f"🎯 con expectativas de éxito equilibradas, sin ejercer presiones desmedidas (Actuación: {raw['AC']}/9)."
     des_ocio = f"⚠️ Esto influye en una notoria disminución de actividades Sociales-Recreativas y Culturales, las cuales se perciben como secundarias o se descuidan frente a las fuertes obligaciones de rendimiento." if (raw["SR"] <= 4 and raw["AC"] >= 6) else "🎨 Mantiene un sano y activo interés en actividades de ocio, recreación y cultura, sirviendo como un excelente complemento a sus obligaciones diarias."
-    texto_b = f"El perfil muestra una familia {des_ac} {des_ocio}"
+    texto_b = f"El perfil muestra una dinámica {des_ac} {des_ocio}"
 
     # C. ESTABILIDAD
     est_or = "📋 sólida y robusta. Las tareas, jerarquías y responsabilidades están muy bien definidas y cuidadosamente planificadas." if raw["OR"] >= 6 else "🌪️ flexible o inestructurada, evidenciando una baja planificación de la rutina diaria y roles difusos."
@@ -208,10 +212,7 @@ def generar_narrativa_dimensiones(raw):
     
     return texto_a, texto_b, texto_c, recs
 
-# --- INTERFAZ ---
-if 'respuestas' not in st.session_state:
-    st.session_state.respuestas = {i: None for i in range(1, 91)}
-
+# --- INTERFAZ SIDEBAR ---
 st.markdown('<div class="excel-header"><h1>ESCALA DE CLIMA SOCIAL FAMILIAR (FES)</h1><h3>Suite de Evaluación Pericial - Sanidad Policial</h3></div>', unsafe_allow_html=True)
 
 with st.sidebar:
@@ -225,38 +226,73 @@ with st.sidebar:
     
     st.divider()
     
-    # --- BOTÓN DE NUEVO LLENADO ---
-    st.warning("⚙️ Controles del Sistema")
+    # NUEVO: SELECTOR DE MODO DE INGRESO
+    st.header("⚙️ Configuración de Ingreso")
+    modo_ingreso = st.radio(
+        "Seleccione el método de llenado:", 
+        ["👤 Modo Paciente (Auto-llenado completo)", "🩺 Modo Psicólogo (Matriz rápida)"]
+    )
+    
+    st.divider()
+    
+    # NUEVO: BOTÓN DE LIMPIAR DATOS
+    st.warning("⚠️ Controles de Sesión")
     if st.button("🔄 NUEVO LLENADO / LIMPIAR DATOS", type="primary", use_container_width=True):
-        st.session_state.respuestas = {i: None for i in range(1, 91)}
+        for i in range(1, 91):
+            st.session_state[f"q{i}"] = None
         st.rerun()
-        
-    st.info("💡 **Instrucciones:** Llene los datos, evalúe el cuestionario y luego exporte su informe clínico oficial.")
 
-tab_test, tab_results = st.tabs(["📝 1. CUESTIONARIO FES", "📊 2. RESULTADOS E INFORME"])
+# --- TABS PRINCIPALES ---
+tab_test, tab_results = st.tabs(["📝 1. CUESTIONARIO / MATRIZ", "📊 2. RESULTADOS E INFORME FINAL"])
 
 with tab_test:
-    st.markdown("<h2 class='seccion-titulo'>1. CUESTIONARIO (90 ÍTEMS)</h2>", unsafe_allow_html=True)
-    c1, c2 = st.columns(2)
-    for i, (txt, sub, clv) in BANCO_FES.items():
-        col = c1 if i <= 45 else c2
-        with col:
-            st.session_state.respuestas[i] = st.radio(
-                f"**{i}.** {txt}", 
-                ["V", "F"], 
-                key=f"q{i}", 
-                horizontal=True, 
-                index=None if st.session_state.respuestas[i] is None else ["V", "F"].index(st.session_state.respuestas[i])
-            )
-            st.divider()
+    if "Paciente" in modo_ingreso:
+        # --- MODO 1: PACIENTE (Preguntas Detalladas) ---
+        st.markdown("<h2 class='seccion-titulo'>1. CUESTIONARIO COMPLETO (AUTO-LLENADO)</h2>", unsafe_allow_html=True)
+        st.info("Instrucciones: Lea cada afirmación cuidadosamente y seleccione 'V' (Verdadero) o 'F' (Falso) según aplique a su dinámica familiar.")
+        
+        c1, c2 = st.columns(2)
+        for i, (txt, sub, clv) in BANCO_FES.items():
+            col = c1 if i <= 45 else c2
+            with col:
+                st.radio(
+                    f"**{i}.** {txt}", 
+                    ["V", "F"], 
+                    key=f"q{i}", 
+                    horizontal=True
+                )
+                st.divider()
+    else:
+        # --- MODO 2: PSICÓLOGO (Matriz Corta de 18x5) ---
+        st.markdown("<h2 class='seccion-titulo'>1. INGRESO RÁPIDO DE MATRIZ (MODO PERITO)</h2>", unsafe_allow_html=True)
+        st.info("Instrucciones: Ingrese las respuestas de forma secuencial copiando la hoja física de la prueba FES.")
+        
+        # Crear 5 columnas exactas
+        grid_cols = st.columns(5)
+        for col_idx in range(5):
+            with grid_cols[col_idx]:
+                for row in range(18):
+                    i = row + 1 + (col_idx * 18)
+                    # Formato hiper compacto
+                    st.radio(
+                        f"Ítem {i}", 
+                        ["V", "F"], 
+                        key=f"q{i}", 
+                        horizontal=True
+                    )
 
-if None not in st.session_state.respuestas.values():
-    raw_scores, pt_scores = calcular_puntuaciones(st.session_state.respuestas)
+# --- RECOPILACIÓN CENTRALIZADA DE RESPUESTAS ---
+# Extraemos las respuestas de session_state para procesar
+respuestas_actuales = {i: st.session_state[f"q{i}"] for i in range(1, 91)}
+
+# --- PROCESAMIENTO SI ESTÁ COMPLETO ---
+if None not in respuestas_actuales.values():
+    raw_scores, pt_scores = calcular_puntuaciones(respuestas_actuales)
     txt_a, txt_b, txt_c, recomendaciones = generar_narrativa_dimensiones(raw_scores)
     tipo_titulo, conclusion_narrativa = analizar_tipologia_familiar(raw_scores)
 
     with tab_results:
-        # VISUALIZACIÓN STREAMLIT: HOJA DE RESPUESTAS MATRIZ
+        # VISUALIZACIÓN: HOJA DE RESPUESTAS MATRIZ
         st.markdown("<h2 class='seccion-titulo'>2. HOJA DE RESPUESTAS LLENA</h2>", unsafe_allow_html=True)
         resp_matrix = []
         for row in range(18): 
@@ -264,13 +300,13 @@ if None not in st.session_state.respuestas.values():
             for col in range(5):
                 item_num = row + 1 + (col * 18)
                 fila[f"Ítem_{col+1}"] = item_num
-                fila[f"R_{col+1}"] = st.session_state.respuestas[item_num]
+                fila[f"R_{col+1}"] = respuestas_actuales[item_num]
             resp_matrix.append(fila)
         
         df_resp = pd.DataFrame(resp_matrix)
         st.dataframe(df_resp, hide_index=True, use_container_width=True)
 
-        # VISUALIZACIÓN STREAMLIT: TABLA DE PUNTUACIONES
+        # VISUALIZACIÓN: TABLA DE PUNTUACIONES
         st.markdown("<h2 class='seccion-titulo'>3. TABLA DE PUNTUACIONES Y PERFIL</h2>", unsafe_allow_html=True)
         data_puntos = []
         for dim, subs in JERARQUIA.items():
@@ -281,7 +317,7 @@ if None not in st.session_state.respuestas.values():
         df_puntos = pd.DataFrame(data_puntos)
         st.dataframe(df_puntos, hide_index=True, use_container_width=True)
 
-        # VISUALIZACIÓN STREAMLIT: GRÁFICA
+        # VISUALIZACIÓN: GRÁFICA CORREGIDA
         names_full = []
         values_t = []
         colors_dim = []
@@ -298,7 +334,7 @@ if None not in st.session_state.respuestas.values():
         fig.update_layout(yaxis_range=[0, 100], title="Perfil de T-Scores", height=350, margin=dict(t=40, b=0))
         st.plotly_chart(fig, use_container_width=True)
 
-        # VISUALIZACIÓN STREAMLIT: INTERPRETACIÓN DE RESULTADOS IA (CON EMOJIS)
+        # VISUALIZACIÓN: INTERPRETACIÓN DE RESULTADOS IA
         st.markdown(f"""
         <div class="card-analisis">
             <h2>4. INTERPRETACIÓN DE RESULTADOS</h2>
@@ -326,14 +362,11 @@ if None not in st.session_state.respuestas.values():
         font.name = 'Arial'
         font.size = Pt(11)
 
-        # TÍTULO DEL DOCUMENTO
         doc.add_heading('INFORME CLÍNICO PERICIAL - ESCALA FES DE MOOS', 0).alignment = WD_ALIGN_PARAGRAPH.CENTER
         
-        # 1. FICHA TÉCNICA
         doc.add_heading('1. FICHA TÉCNICA', level=1)
         doc.add_paragraph(f"Paciente / Evaluado: {nombre}\nEdad: {edad} años\nOcupación: {ocup}\nSede / Jurisdicción: {lugar}\nExaminador: {exam}\nFecha de Evaluación: {fecha.strftime('%d/%m/%Y')}")
 
-        # 2. HOJA DE RESPUESTAS
         doc.add_heading('2. HOJA DE RESPUESTAS LLENA', level=1)
         doc.add_paragraph("Instrucciones: El evaluado marcó V para Verdadero y F para Falso.")
         
@@ -350,11 +383,10 @@ if None not in st.session_state.respuestas.values():
             for col in range(5):
                 item_num = row + 1 + (col * 18)
                 table_resp.cell(row+1, col*2).text = str(item_num)
-                table_resp.cell(row+1, col*2 + 1).text = st.session_state.respuestas[item_num]
+                table_resp.cell(row+1, col*2 + 1).text = respuestas_actuales[item_num]
 
         doc.add_paragraph() 
 
-        # 3. TABLA DE PUNTUACIONES Y PERFIL
         doc.add_heading('3. TABLA DE PUNTUACIONES Y PERFIL', level=1)
         doc.add_paragraph("(Conversión de Puntajes Directos a Niveles Interpretativos)")
         
@@ -374,7 +406,7 @@ if None not in st.session_state.respuestas.values():
             row_cells[2].text = str(r_data["PD"])
             row_cells[3].text = r_data["Nivel"]
 
-        # 3.1 GRÁFICA EN WORD
+        # GRÁFICA EN WORD
         plt.figure(figsize=(9, 4))
         plt.bar(names_full, values_t, color=colors_dim)
         plt.axhline(y=50, color='red', linestyle='--', alpha=0.5)
@@ -389,7 +421,6 @@ if None not in st.session_state.respuestas.values():
 
         doc.add_page_break()
 
-        # 4. INTERPRETACIÓN DE RESULTADOS (INCLUYE EMOJIS)
         doc.add_heading('4. INTERPRETACIÓN DE RESULTADOS', level=1)
         doc.add_heading('A. Dimensión de Relaciones', level=2)
         doc.add_paragraph(txt_a)
@@ -398,7 +429,6 @@ if None not in st.session_state.respuestas.values():
         doc.add_heading('C. Dimensión de Estabilidad', level=2)
         doc.add_paragraph(txt_c)
 
-        # 5. CONCLUSIONES Y RECOMENDACIONES
         doc.add_heading('5. CONCLUSIONES Y RECOMENDACIONES', level=1)
         p_diag = doc.add_paragraph()
         p_diag.add_run(f"Diagnóstico Tipológico: {tipo_titulo}\n").bold = True
@@ -408,12 +438,10 @@ if None not in st.session_state.respuestas.values():
         for r in recomendaciones:
             doc.add_paragraph(r, style='List Bullet')
 
-        # Firmas
         doc.add_paragraph("\n\n\n" + "_"*40).alignment = WD_ALIGN_PARAGRAPH.CENTER
         p_firma = doc.add_paragraph(f"{exam}\n{lugar}")
         p_firma.alignment = WD_ALIGN_PARAGRAPH.CENTER
 
-        # BOTÓN DE DESCARGA
         buf = BytesIO()
         doc.save(buf)
         st.download_button(
@@ -426,4 +454,6 @@ if None not in st.session_state.respuestas.values():
 
 else:
     with tab_results:
-        st.info("⚠️ Complete las 90 preguntas en la pestaña del cuestionario para generar las gráficas, el análisis y el documento Word.")
+        # Cálcular cuantas faltan
+        faltantes = sum(1 for v in respuestas_actuales.values() if v is None)
+        st.info(f"⏳ Faltan {faltantes} preguntas por contestar. Complete el cuestionario o la matriz para generar el análisis y el informe.")
