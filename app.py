@@ -20,15 +20,16 @@ st.markdown("""
         box-shadow: 0 5px 15px rgba(0,0,0,0.2); margin-bottom: 25px;
     }
     .card-analisis { 
-        background-color: white; padding: 25px; border-radius: 10px; 
-        border-top: 8px solid #1E3A8A; box-shadow: 0 4px 8px rgba(0,0,0,0.1); 
-        margin-bottom: 20px; 
+        background-color: white; padding: 30px; border-radius: 10px; 
+        border-top: 8px solid #1E3A8A; box-shadow: 0 4px 12px rgba(0,0,0,0.1); 
+        margin-bottom: 25px; 
     }
     .card-recomendaciones { 
-        background-color: #E8F4F8; padding: 25px; border-radius: 10px; 
-        border-left: 8px solid #28B463; margin-bottom: 20px; 
+        background-color: #E8F4F8; padding: 30px; border-radius: 10px; 
+        border-left: 8px solid #28B463; margin-bottom: 25px; 
     }
     .stDataFrame { border-radius: 10px; overflow: hidden; box-shadow: 0 4px 8px rgba(0,0,0,0.05); }
+    h4 { color: #1E3A8A; margin-top: 15px; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -160,39 +161,46 @@ def calcular_puntuaciones(respuestas):
         
     return raw_scores, t_scores
 
-def realizar_analisis_clinico(pt, nombre):
-    diagnostico = ""
-    conclusiones = f"Basado en los resultados de la Escala de Clima Social Familiar (FES), el núcleo familiar del evaluado presenta un sistema "
-    recomendaciones = []
+def generar_narrativa_dimensiones(t, raw):
+    # A. RELACIONES
+    rel_co = "alta cohesión emocional y un fuerte sentimiento de pertenencia" if t["CO"] >= 60 else ("baja cohesión emocional, indicando un distanciamiento afectivo" if t["CO"] <= 40 else "un nivel promedio de cohesión, con un apoyo mutuo funcional")
+    rel_ex = "La expresividad es alta, lo que indica que se permite la comunicación de sentimientos de manera abierta" if t["EX"] >= 60 else ("Existe dificultad para comunicar sentimientos abiertamente" if t["EX"] <= 40 else "Se observa una expresividad moderada, permitiendo la comunicación en situaciones cotidianas")
+    rel_ct = "sin embargo, el nivel de conflicto es elevado, sugiriendo tensión y agresividad latente." if t["CT"] >= 60 else ("El nivel de conflicto es mínimo, sugiriendo un entorno pacífico y de resolución constructiva." if t["CT"] <= 40 else "El nivel de conflicto se mantiene dentro de los parámetros esperables y manejables.")
     
-    if pt["CT"] >= 60:
-        diagnostico += "🌋 **Alto Conflicto:** Se detecta una dinámica de reactividad verbal o conductual. Posiblemente derivado de estrés ambiental u ocupacional severo. "
-        conclusiones += "caracterizado por una alta incidencia de conflictos, donde la expresión de la ira y la agresividad limitan la armonía del hogar. "
-        recomendaciones.append("Derivación a mediación familiar o consejería para gestión de conflictos.")
-        recomendaciones.append("Implementar técnicas de desactivación fisiológica antes de abordar discusiones intensas.")
-    
-    if pt["CO"] <= 40:
-        diagnostico += "🧊 **Baja Cohesión:** Distanciamiento afectivo. Los miembros operan como unidades aisladas. "
-        conclusiones += "Se observa un déficit en la cohesión y el apoyo mutuo, indicando un distanciamiento emocional. "
-        recomendaciones.append("Fomentar espacios de ocio compartido (Ej. una 'hora familiar' innegociable a la semana).")
-    
-    if pt["CN"] >= 65:
-        diagnostico += "⛓️ **Exceso de Control:** El sistema normativo es rígido. Proyección de protocolos estrictos al hogar. "
-        conclusiones += "Existe una marcada rigidez en la estructura y el control, asfixiando la autonomía individual. "
-        recomendaciones.append("Flexibilizar las normativas del hogar, permitiendo que las reglas se negocien de acuerdo a la edad.")
-    
-    if pt["EX"] <= 40:
-        recomendaciones.append("Entrenamiento en asertividad y comunicación emocional para facilitar la expresión segura.")
+    texto_relaciones = f"El evaluado percibe un clima familiar de {rel_co} (Cohesión: {raw['CO']}/9). {rel_ex} (Expresividad: {raw['EX']}/9). {rel_ct} (Conflicto: {raw['CT']}/9)."
 
-    if pt["CT"] < 60 and pt["CO"] > 40 and pt["CN"] < 65:
-        diagnostico += "🕊️ **Equilibrio Normativo:** El flujo de comunicación y normatividad es adecuado y adaptativo. "
-        conclusiones += "equilibrado, con niveles adecuados de apoyo mutuo y una estructura de reglas que favorece el desarrollo. "
-        recomendaciones.append("Continuar fortaleciendo los canales de comunicación actuales.")
-        recomendaciones.append("Promover actividades culturales e intelectuales conjuntas.")
+    # B. DESARROLLO
+    des_ac = "altamente orientada a la actuación y el éxito, existiendo una presión significativa por cumplir metas (Actuación: {raw['AC']}/9)." if t["AC"] >= 60 else "con una orientación moderada hacia el éxito sin ejercer presiones extremas."
+    des_au = "Fomenta fuertemente la independencia y autonomía de sus miembros." if t["AU"] >= 60 else ("Se limita ligeramente la toma de decisiones independientes." if t["AU"] <= 40 else "Permite un desarrollo adecuado de la autonomía personal.")
+    
+    # Evaluar bajas en ocio/cultura debido a alta actuación u otros factores
+    des_ocio = ""
+    if t["SR"] <= 40 or t["IC"] <= 40:
+        des_ocio = f"Esto se ve reflejado en la disminución de actividades Sociales-Recreativas ({raw['SR']}/9) y Culturales ({raw['IC']}/9), las cuales pueden percibirse como secundarias frente a otras obligaciones."
+    else:
+        des_ocio = f"Además, mantienen un interés activo y saludable en actividades Sociales-Recreativas ({raw['SR']}/9) e Intelectuales-Culturales ({raw['IC']}/9)."
         
-    conclusiones += "Es importante contextualizar estos hallazgos con las exigencias del entorno socio-laboral del funcionario."
+    texto_desarrollo = f"El perfil muestra una dinámica {des_ac.format(raw=raw)} {des_au} {des_ocio} En cuanto a la moralidad y religiosidad, el énfasis en valores éticos es {'marcado' if t['MR']>=60 else ('bajo' if t['MR']<=40 else 'promedio')} ({raw['MR']}/9)."
 
-    return diagnostico, conclusiones, recomendaciones
+    # C. ESTABILIDAD
+    est_or = "sólida, donde las tareas y responsabilidades están bien definidas y planificadas" if t["OR"] >= 60 else ("deficiente, mostrando falta de planificación en la rutina diaria" if t["OR"] <= 40 else "adecuada, manteniendo un orden funcional en el hogar")
+    est_cn = "El control es rígido y autoritario, ateniéndose estrictamente a procedimientos fijos" if t["CN"] >= 65 else ("El control es bajo, lo que podría indicar una ausencia de normatividad clara" if t["CN"] <= 40 else "El control es moderado, lo que indica que existen reglas claras pero estas no llegan a ser autoritarias, permitiendo un margen de libertad")
+    
+    texto_estabilidad = f"El hogar presenta una organización {est_or} (Organización: {raw['OR']}/9). {est_cn} (Control: {raw['CN']}/9)."
+
+    return texto_relaciones, texto_desarrollo, texto_estabilidad
+
+def realizar_analisis_clinico(pt, raw, nombre):
+    texto_relaciones, texto_desarrollo, texto_estabilidad = generar_narrativa_dimensiones(pt, raw)
+    
+    recomendaciones = []
+    if pt["CT"] >= 60: recomendaciones.append("Implementar técnicas de resolución de conflictos y desactivación fisiológica.")
+    if pt["CO"] <= 40: recomendaciones.append("Fomentar espacios de ocio compartido e interacción familiar para mejorar la cohesión.")
+    if pt["CN"] >= 65: recomendaciones.append("Flexibilizar las normativas del hogar, permitiendo mayor participación en la toma de decisiones.")
+    if pt["EX"] <= 40: recomendaciones.append("Entrenamiento en asertividad y comunicación emocional.")
+    if len(recomendaciones) == 0: recomendaciones.append("Continuar fortaleciendo los canales de comunicación y mantener las dinámicas de apoyo actuales.")
+
+    return texto_relaciones, texto_desarrollo, texto_estabilidad, recomendaciones
 
 def nivel_cualitativo(val):
     if val >= 70: return "Muy Alta"
@@ -254,31 +262,21 @@ if None not in st.session_state.respuestas.values():
         fig.update_layout(yaxis_range=[0, 100], title="Perfil Familiar Integrado (T-Scores)")
         st.plotly_chart(fig, use_container_width=True)
 
-        # 2. RESUMEN
-        st.header("📋 Resumen de Puntuaciones")
-        col_res1, col_res2, col_res3 = st.columns(3)
-        cols_ref = [col_res1, col_res2, col_res3]
-        
-        for idx, (dim, subs) in enumerate(JERARQUIA.items()):
-            with cols_ref[idx]:
-                st.subheader(f"{dim.split('.')[1]}")
-                for sigla, (n_full, desc) in subs.items():
-                    nivel = nivel_cualitativo(pt_scores[sigla])
-                    st.markdown(f"**{n_full}** - PD: {raw_scores[sigla]} | T: {pt_scores[sigla]} (*{nivel}*)")
-
-        # 3. ANÁLISIS DE IA
-        diagnostico, conclusiones, recomendaciones = realizar_analisis_clinico(pt_scores, nombre)
+        # 2. ANÁLISIS CLÍNICO DETALLADO (NUEVO FORMATO)
+        txt_rel, txt_des, txt_est, recomendaciones = realizar_analisis_clinico(pt_scores, raw_scores, nombre)
         
         st.markdown(f"""
         <div class="card-analisis">
-            <h2>🧠 Diagnóstico Clínico Automatizado</h2>
-            <p>{diagnostico}</p>
+            <h2>🧠 4. INTERPRETACIÓN DE RESULTADOS</h2>
+            <h4>A. Dimensión de Relaciones</h4>
+            <p>{txt_rel}</p>
+            <h4>B. Dimensión de Desarrollo</h4>
+            <p>{txt_des}</p>
+            <h4>C. Dimensión de Estabilidad</h4>
+            <p>{txt_est}</p>
         </div>
         <div class="card-recomendaciones">
-            <h2>📌 Conclusiones</h2>
-            <p>{conclusiones}</p>
-            <hr>
-            <h3>✅ Recomendaciones Terapéuticas</h3>
+            <h2>✅ 5. RECOMENDACIONES</h2>
             <ul>{''.join([f'<li>{r}</li>' for r in recomendaciones])}</ul>
         </div>
         """, unsafe_allow_html=True)
@@ -291,10 +289,10 @@ if None not in st.session_state.respuestas.values():
         titulo = doc.add_heading('INFORME CLÍNICO FES DE MOOS', 0)
         titulo.alignment = 1
 
-        doc.add_heading('I. Ficha Técnica', level=1)
+        doc.add_heading('1. Ficha Técnica', level=1)
         doc.add_paragraph(f"Paciente: {nombre}\nEdad: {edad}\nOcupación: {ocup}\nJurisdicción: {lugar}\nExaminador: {exam}\nFecha: {fecha.strftime('%d/%m/%Y')}")
 
-        doc.add_heading('II. Perfil Gráfico', level=1)
+        doc.add_heading('2. Perfil Gráfico', level=1)
         plt.figure(figsize=(10, 4))
         plt.bar(names_full, values_t, color=colors_dim)
         plt.axhline(y=50, color='r', linestyle='--', alpha=0.5)
@@ -304,7 +302,7 @@ if None not in st.session_state.respuestas.values():
         doc.add_picture(img_buf, width=Inches(6))
         plt.close()
 
-        doc.add_heading('III. Sumatoria de Puntajes (Directo y T-Score)', level=1)
+        doc.add_heading('3. Sumatoria de Puntajes (Directo y T-Score)', level=1)
         for dim_nombre, subescalas in JERARQUIA.items():
             doc.add_heading(f"{dim_nombre.split('.')[1].strip()}", level=2)
             for sigla, (n_full, desc) in subescalas.items():
@@ -312,21 +310,25 @@ if None not in st.session_state.respuestas.values():
                 t_val = pt_scores[sigla]
                 nivel = nivel_cualitativo(t_val)
                 p = doc.add_paragraph(style='List Bullet')
-                p.add_run(f"{n_full} (PD: {pd_val} | T-Score: {t_val}): ").bold = True
+                p.add_run(f"{n_full} (PD: {pd_val} | T: {t_val}): ").bold = True
                 p.add_run(f"{nivel}. ").italic = True
-                p.add_run(desc)
 
-        doc.add_heading('IV. Conclusiones y Diagnóstico', level=1)
-        doc.add_paragraph(conclusiones)
-        doc.add_heading('V. Recomendaciones', level=1)
+        doc.add_heading('4. Interpretación de Resultados', level=1)
+        doc.add_heading('A. Dimensión de Relaciones', level=2)
+        doc.add_paragraph(txt_rel)
+        doc.add_heading('B. Dimensión de Desarrollo', level=2)
+        doc.add_paragraph(txt_des)
+        doc.add_heading('C. Dimensión de Estabilidad', level=2)
+        doc.add_paragraph(txt_est)
+
+        doc.add_heading('5. Recomendaciones', level=1)
         for r in recomendaciones:
             doc.add_paragraph(r, style='List Bullet')
 
         # --- TABLA DE RESPUESTAS EN WORD ---
         doc.add_page_break()
-        doc.add_heading('VI. Anexo: Matriz de Respuestas Literales', level=1)
+        doc.add_heading('6. Anexo: Matriz de Respuestas Literales', level=1)
         
-        # Crear tabla en Word con bordes
         table = doc.add_table(rows=1, cols=4)
         table.style = 'Table Grid'
         hdr_cells = table.rows[0].cells
@@ -353,9 +355,8 @@ if None not in st.session_state.respuestas.values():
 
     with tab_matrix:
         st.header("🧮 Matriz Detallada de Corrección")
-        st.write("Esta tabla muestra la selección del paciente frente a la clave de corrección y si obtuvo puntaje (1) o no (0).")
+        st.write("Esta tabla muestra la selección del evaluado frente a la clave de corrección.")
         
-        # Crear el DataFrame para visualización
         datos_matriz = []
         for i in range(1, 91):
             texto, sub, clave = BANCO_FES[i]
@@ -365,8 +366,8 @@ if None not in st.session_state.respuestas.values():
                 "Ítem": i,
                 "Pregunta": texto,
                 "Subescala": sub,
-                "Respuesta Paciente": res_usuario,
-                "Clave Esperada": clave,
+                "Respuesta": res_usuario,
+                "Clave": clave,
                 "Puntos": puntua
             })
             
