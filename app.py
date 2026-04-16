@@ -183,14 +183,14 @@ def analizar_tipologia_familiar(raw):
 
 def generar_narrativa_dimensiones(raw):
     # A. RELACIONES
-    rel_co = "alta cohesión emocional. Existe un fuerte sentimiento de pertenencia y apoyo mutuo" if raw["CO"] >= 6 else ("baja cohesión emocional, indicando un distanciamiento y desvinculación" if raw["CO"] <= 3 else "cohesión emocional promedio, con un apoyo mutuo funcional")
+    rel_co = "alta cohesión emocional. Existe un fuerte sentimiento de pertenencia y apoyo mutuo entre los miembros." if raw["CO"] >= 6 else ("baja cohesión emocional, indicando un distanciamiento y desvinculación." if raw["CO"] <= 3 else "cohesión emocional promedio, con un apoyo mutuo funcional.")
     rel_ex = "La expresividad es alta, lo que indica que se permite la comunicación de sentimientos de manera abierta." if raw["EX"] >= 6 else ("La expresividad es limitada, sugiriendo dificultad para la comunicación abierta de sentimientos." if raw["EX"] <= 3 else "La expresividad es moderada.")
-    rel_ct = "Sin embargo, el nivel de conflicto es elevado, sugiriendo un entorno de tensión y discusiones constantes." if raw["CT"] >= 6 else ("El nivel de conflicto es mínimo, sugiriendo un entorno pacífico y de resolución constructiva." if raw["CT"] <= 3 else "El conflicto se maneja dentro de los parámetros habituales.")
-    texto_a = f"El/la evaluado/a percibe un clima familiar de {rel_co}. {rel_ex} {rel_ct}"
+    rel_ct = "El nivel de conflicto es elevado, sugiriendo un entorno de tensión y discusiones constantes." if raw["CT"] >= 6 else ("El nivel de conflicto es mínimo, sugiriendo un entorno pacífico y de resolución constructiva." if raw["CT"] <= 3 else "El conflicto se maneja dentro de los parámetros habituales.")
+    texto_a = f"El/la evaluado/a percibe un clima familiar de {rel_co} {rel_ex} {rel_ct}"
 
     # B. DESARROLLO
     des_ac = f"altamente orientada a la actuación y el éxito. Existe una presión significativa por cumplir metas (Actuación: {raw['AC']}/9)." if raw["AC"] >= 6 else f"con expectativas de éxito equilibradas (Actuación: {raw['AC']}/9)."
-    des_ocio = f"Esto influye en una disminución de actividades Sociales-Recreativas y Culturales, las cuales se perciben como secundarias." if (raw["SR"] <= 4 and raw["AC"] >= 6) else "Mantienen un sano interés en actividades de ocio y cultura como complemento a sus obligaciones."
+    des_ocio = f"Esto influye en una disminución de actividades Sociales-Recreativas y Culturales, las cuales se perciben como secundarias o descuidadas frente a las obligaciones." if (raw["SR"] <= 4 and raw["AC"] >= 6) else "Mantienen un sano interés en actividades de ocio y cultura como complemento a sus obligaciones."
     texto_b = f"El perfil muestra una familia {des_ac} {des_ocio}"
 
     # C. ESTABILIDAD
@@ -218,7 +218,7 @@ with st.sidebar:
     st.header("👤 Datos Generales")
     nombre = st.text_input("Paciente / Evaluado", "Funcionario Policial X")
     edad = st.number_input("Edad", 18, 80, 30)
-    ocup = st.text_input("Ocupación / Rango", "Sub-Inspector de Policía")
+    ocup = st.text_input("Ocupación / Rango", "Sub-Inspector")
     lugar = st.text_input("Sede / Jurisdicción", "Sanidad Policial - Honduras")
     exam = st.text_input("Examinador", "Lic. en Psicología")
     fecha = st.date_input("Fecha de Evaluación", datetime.date.today())
@@ -244,7 +244,7 @@ if None not in st.session_state.respuestas.values():
         # VISUALIZACIÓN STREAMLIT: HOJA DE RESPUESTAS (5 COLUMNAS)
         st.markdown("<h2 class='seccion-titulo'>2. HOJA DE RESPUESTAS LLENA</h2>", unsafe_allow_html=True)
         resp_matrix = []
-        for row in range(18): # 18 filas x 5 columnas = 90 ítems
+        for row in range(18): 
             fila = {}
             for col in range(5):
                 item_num = row + 1 + (col * 18)
@@ -266,9 +266,9 @@ if None not in st.session_state.respuestas.values():
         df_puntos = pd.DataFrame(data_puntos)
         st.dataframe(df_puntos, hide_index=True, use_container_width=True)
 
-        # VISUALIZACIÓN STREAMLIT: GRÁFICO (Opcional visual)
+        # VISUALIZACIÓN STREAMLIT: GRÁFICO 
         names_full = [r["Subescala"] for r in data_puntos]
-        values_t = [pt_scores[s] for s in [list(subs.keys()) for subs in JERARQUIA.values() for s in subs]] # Extraer T-scores ordenados
+        values_t = [pt_scores[s] for s in [list(subs.keys()) for subs in JERARQUIA.values() for s in subs]] 
         colors_dim = ["#1E88E5"]*3 + ["#2E7D32"]*5 + ["#E65100"]*2
         fig = go.Figure(data=[go.Bar(x=names_full, y=[pt_scores[s] for d in JERARQUIA.values() for s in d.keys()], marker_color=colors_dim)])
         fig.update_layout(yaxis_range=[0, 100], title="Perfil de T-Scores", height=300, margin=dict(t=30, b=0))
@@ -297,27 +297,21 @@ if None not in st.session_state.respuestas.values():
         st.markdown("<h2 class='seccion-titulo'>💾 EXPORTACIÓN OFICIAL</h2>", unsafe_allow_html=True)
         
         doc = Document()
-        # Estilos generales para el documento
         style = doc.styles['Normal']
         font = style.font
         font.name = 'Arial'
         font.size = Pt(11)
 
-        # Encabezado
         doc.add_heading('INFORME CLÍNICO - ESCALA FES DE MOOS', 0).alignment = WD_ALIGN_PARAGRAPH.CENTER
         
-        # 1. FICHA TÉCNICA
         doc.add_heading('1. FICHA TÉCNICA', level=1)
         doc.add_paragraph(f"Paciente / Evaluado: {nombre}\nEdad: {edad} años\nOcupación: {ocup}\nSede / Jurisdicción: {lugar}\nExaminador: {exam}\nFecha de Evaluación: {fecha.strftime('%d/%m/%Y')}")
 
-        # 2. HOJA DE RESPUESTAS (Formato Matriz 10 Columnas)
-        doc.add_heading('2. HOJA DE RESPUESTAS LLENA (EJEMPLO DE CASO)', level=1)
+        doc.add_heading('2. HOJA DE RESPUESTAS LLENA', level=1)
         doc.add_paragraph("Instrucciones: El evaluado marcó V para Verdadero y F para Falso.")
         
-        # Crear tabla 18x10
         table_resp = doc.add_table(rows=19, cols=10)
         table_resp.style = 'Table Grid'
-        # Cabeceras
         for col_idx in range(5):
             table_resp.cell(0, col_idx*2).text = "Ítem"
             table_resp.cell(0, col_idx*2).paragraphs[0].runs[0].bold = True
@@ -330,9 +324,8 @@ if None not in st.session_state.respuestas.values():
                 table_resp.cell(row+1, col*2).text = str(item_num)
                 table_resp.cell(row+1, col*2 + 1).text = st.session_state.respuestas[item_num]
 
-        doc.add_paragraph() # Espaciador
+        doc.add_paragraph() 
 
-        # 3. TABLA DE PUNTUACIONES
         doc.add_heading('3. TABLA DE PUNTUACIONES Y PERFIL', level=1)
         doc.add_paragraph("(Conversión de Puntajes Directos a Niveles Interpretativos)")
         
@@ -345,7 +338,6 @@ if None not in st.session_state.respuestas.values():
         hdr_cells[3].text = 'Nivel'
         for cell in hdr_cells: cell.paragraphs[0].runs[0].bold = True
 
-        # Llenar datos de puntuaciones
         for r_data in data_puntos:
             row_cells = table_pts.add_row().cells
             row_cells[0].text = r_data["Dimensión"]
@@ -355,7 +347,6 @@ if None not in st.session_state.respuestas.values():
 
         doc.add_page_break()
 
-        # 4. INTERPRETACIÓN DE RESULTADOS
         doc.add_heading('4. INTERPRETACIÓN DE RESULTADOS', level=1)
         doc.add_heading('A. Dimensión de Relaciones', level=2)
         doc.add_paragraph(txt_a)
@@ -364,7 +355,6 @@ if None not in st.session_state.respuestas.values():
         doc.add_heading('C. Dimensión de Estabilidad', level=2)
         doc.add_paragraph(txt_c)
 
-        # 5. CONCLUSIONES Y RECOMENDACIONES
         doc.add_heading('5. CONCLUSIONES Y RECOMENDACIONES', level=1)
         p_diag = doc.add_paragraph()
         p_diag.add_run(conclusion_narrativa)
@@ -373,12 +363,10 @@ if None not in st.session_state.respuestas.values():
         for r in recomendaciones:
             doc.add_paragraph(r, style='List Bullet')
 
-        # Firmas
         doc.add_paragraph("\n\n\n" + "_"*40).alignment = WD_ALIGN_PARAGRAPH.CENTER
         p_firma = doc.add_paragraph(f"{exam}\n{lugar}")
         p_firma.alignment = WD_ALIGN_PARAGRAPH.CENTER
 
-        # Botón Descarga
         buf = BytesIO()
         doc.save(buf)
         st.download_button("📥 DESCARGAR INFORME CLÍNICO FINAL (WORD)", buf.getvalue(), f"Informe_FES_{nombre.replace(' ', '_')}.docx", type="primary", use_container_width=True)
