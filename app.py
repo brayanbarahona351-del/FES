@@ -5,8 +5,6 @@ import matplotlib.pyplot as plt
 from docx import Document
 from docx.shared import Inches, Pt, RGBColor
 from docx.enum.text import WD_ALIGN_PARAGRAPH
-from docx.oxml.ns import qn
-from docx.oxml import OxmlElement
 from io import BytesIO
 import datetime
 
@@ -179,12 +177,12 @@ def analizar_tipologia_familiar(raw):
     elif raw["CO"] >= 7 and raw["SR"] >= 6:
         return "Familia Integrada y Sociable", "Se concluye que el sistema es altamente funcional, definido como 'Familia Integrada'. Cuentan con excelentes redes de apoyo interno y externo."
     else:
-        return "Familia en Desarrollo de Adaptación", "Se concluye que el sistema familiar se encuentra en una fase de adaptación, mostrando fortalezas y áreas de mejora mixtas dependientes del estresor actual."
+        return "Familia en Desarrollo de Adaptación", "Se concluye que el sistema familiar se encuentra en una fase de adaptación, mostrando fortalezas y áreas de mejora mixtas dependientes del estresor actual o de la etapa del ciclo vital."
 
 def generar_narrativa_dimensiones(raw):
     # A. RELACIONES
     rel_co = "alta cohesión emocional. Existe un fuerte sentimiento de pertenencia y apoyo mutuo entre los miembros." if raw["CO"] >= 6 else ("baja cohesión emocional, indicando un distanciamiento y desvinculación." if raw["CO"] <= 3 else "cohesión emocional promedio, con un apoyo mutuo funcional.")
-    rel_ex = "La expresividad es alta, lo que indica que se permite la comunicación de sentimientos de manera abierta." if raw["EX"] >= 6 else ("La expresividad es limitada, sugiriendo dificultad para la comunicación abierta de sentimientos." if raw["EX"] <= 3 else "La expresividad es moderada.")
+    rel_ex = "La expresividad es alta, lo que indica que se permite la comunicación de sentimientos de manera abierta." if raw["EX"] >= 6 else ("La expresividad es limitada, sugiriendo dificultad para la comunicación abierta de sentimientos." if raw["EX"] <= 3 else "La expresividad es moderada, permitiendo comunicación en áreas seguras.")
     rel_ct = "El nivel de conflicto es elevado, sugiriendo un entorno de tensión y discusiones constantes." if raw["CT"] >= 6 else ("El nivel de conflicto es mínimo, sugiriendo un entorno pacífico y de resolución constructiva." if raw["CT"] <= 3 else "El conflicto se maneja dentro de los parámetros habituales.")
     texto_a = f"El/la evaluado/a percibe un clima familiar de {rel_co} {rel_ex} {rel_ct}"
 
@@ -195,7 +193,7 @@ def generar_narrativa_dimensiones(raw):
 
     # C. ESTABILIDAD
     est_or = "sólida. Las tareas y responsabilidades están bien definidas y planificadas." if raw["OR"] >= 6 else "flexible o inestructurada, con baja planificación de la rutina diaria."
-    est_cn = "El control es alto, denotando un sistema de reglas estricto que podría llegar a ser autoritario." if raw["CN"] >= 7 else ("El control es moderado, lo que indica que existen reglas claras pero estas no llegan a ser autoritarias ni rígidas, permitiendo un margen de libertad personal." if raw["CN"] >= 4 else "El control es bajo, sugiriendo alta permisividad.")
+    est_cn = "El control es alto, denotando un sistema de reglas estricto que podría llegar a ser autoritario." if raw["CN"] >= 7 else ("El control es moderado, lo que indica que existen reglas claras pero estas no llegan a ser autoritarias ni rígidas, permitiendo un margen de libertad personal." if raw["CN"] >= 4 else "El control es bajo, sugiriendo alta permisividad en el hogar.")
     texto_c = f"El hogar presenta una organización {est_or} {est_cn}"
 
     # RECOMENDACIONES BASE
@@ -232,7 +230,13 @@ with tab_test:
     for i, (txt, sub, clv) in BANCO_FES.items():
         col = c1 if i <= 45 else c2
         with col:
-            st.session_state.respuestas[i] = st.radio(f"**{i}.** {txt}", ["V", "F"], key=f"q{i}", horizontal=True, index=None if st.session_state.respuestas[i] is None else ["V", "F"].index(st.session_state.respuestas[i]))
+            st.session_state.respuestas[i] = st.radio(
+                f"**{i}.** {txt}", 
+                ["V", "F"], 
+                key=f"q{i}", 
+                horizontal=True, 
+                index=None if st.session_state.respuestas[i] is None else ["V", "F"].index(st.session_state.respuestas[i])
+            )
             st.divider()
 
 if None not in st.session_state.respuestas.values():
@@ -241,7 +245,7 @@ if None not in st.session_state.respuestas.values():
     tipo_titulo, conclusion_narrativa = analizar_tipologia_familiar(raw_scores)
 
     with tab_results:
-        # VISUALIZACIÓN STREAMLIT: HOJA DE RESPUESTAS (5 COLUMNAS)
+        # VISUALIZACIÓN STREAMLIT: HOJA DE RESPUESTAS MATRIZ
         st.markdown("<h2 class='seccion-titulo'>2. HOJA DE RESPUESTAS LLENA</h2>", unsafe_allow_html=True)
         resp_matrix = []
         for row in range(18): 
@@ -266,15 +270,27 @@ if None not in st.session_state.respuestas.values():
         df_puntos = pd.DataFrame(data_puntos)
         st.dataframe(df_puntos, hide_index=True, use_container_width=True)
 
-        # VISUALIZACIÓN STREAMLIT: GRÁFICO 
-        names_full = [r["Subescala"] for r in data_puntos]
-        values_t = [pt_scores[s] for s in [list(subs.keys()) for subs in JERARQUIA.values() for s in subs]] 
-        colors_dim = ["#1E88E5"]*3 + ["#2E7D32"]*5 + ["#E65100"]*2
-        fig = go.Figure(data=[go.Bar(x=names_full, y=[pt_scores[s] for d in JERARQUIA.values() for s in d.keys()], marker_color=colors_dim)])
-        fig.update_layout(yaxis_range=[0, 100], title="Perfil de T-Scores", height=300, margin=dict(t=30, b=0))
-        st.plotly_chart(fig, use_container_width=True)
+        # ----------------------------------------------------------------------
+        # SOLUCIÓN DEL ERROR TYPEERROR EN LA GRÁFICA
+        # ----------------------------------------------------------------------
+        names_full = []
+        values_t = []
+        colors_dim = []
+        
+        for dim, subs in JERARQUIA.items():
+            for sigla, (nom, desc) in subs.items():
+                names_full.append(nom)
+                values_t.append(pt_scores[sigla])
+                if dim == "RELACIONES": colors_dim.append("#1E88E5")
+                elif dim == "DESARROLLO": colors_dim.append("#2E7D32")
+                elif dim == "ESTABILIDAD": colors_dim.append("#E65100")
 
-        # VISUALIZACIÓN STREAMLIT: INTERPRETACIÓN
+        fig = go.Figure(data=[go.Bar(x=names_full, y=values_t, marker_color=colors_dim)])
+        fig.update_layout(yaxis_range=[0, 100], title="Perfil de T-Scores", height=350, margin=dict(t=40, b=0))
+        st.plotly_chart(fig, use_container_width=True)
+        # ----------------------------------------------------------------------
+
+        # VISUALIZACIÓN STREAMLIT: INTERPRETACIÓN DE RESULTADOS IA
         st.markdown(f"""
         <div class="card-analisis">
             <h2>4. INTERPRETACIÓN DE RESULTADOS</h2>
@@ -302,16 +318,20 @@ if None not in st.session_state.respuestas.values():
         font.name = 'Arial'
         font.size = Pt(11)
 
+        # TÍTULO DEL DOCUMENTO
         doc.add_heading('INFORME CLÍNICO - ESCALA FES DE MOOS', 0).alignment = WD_ALIGN_PARAGRAPH.CENTER
         
+        # 1. FICHA TÉCNICA
         doc.add_heading('1. FICHA TÉCNICA', level=1)
         doc.add_paragraph(f"Paciente / Evaluado: {nombre}\nEdad: {edad} años\nOcupación: {ocup}\nSede / Jurisdicción: {lugar}\nExaminador: {exam}\nFecha de Evaluación: {fecha.strftime('%d/%m/%Y')}")
 
+        # 2. HOJA DE RESPUESTAS
         doc.add_heading('2. HOJA DE RESPUESTAS LLENA', level=1)
         doc.add_paragraph("Instrucciones: El evaluado marcó V para Verdadero y F para Falso.")
         
         table_resp = doc.add_table(rows=19, cols=10)
         table_resp.style = 'Table Grid'
+        
         for col_idx in range(5):
             table_resp.cell(0, col_idx*2).text = "Ítem"
             table_resp.cell(0, col_idx*2).paragraphs[0].runs[0].bold = True
@@ -326,6 +346,7 @@ if None not in st.session_state.respuestas.values():
 
         doc.add_paragraph() 
 
+        # 3. TABLA DE PUNTUACIONES Y PERFIL
         doc.add_heading('3. TABLA DE PUNTUACIONES Y PERFIL', level=1)
         doc.add_paragraph("(Conversión de Puntajes Directos a Niveles Interpretativos)")
         
@@ -345,8 +366,22 @@ if None not in st.session_state.respuestas.values():
             row_cells[2].text = str(r_data["PD"])
             row_cells[3].text = r_data["Nivel"]
 
+        # 3.1 GRÁFICA EN WORD
+        plt.figure(figsize=(9, 4))
+        plt.bar(names_full, values_t, color=colors_dim)
+        plt.axhline(y=50, color='red', linestyle='--', alpha=0.5)
+        plt.ylim(0, 100)
+        plt.xticks(rotation=45, ha='right')
+        plt.tight_layout()
+        img_buf = BytesIO()
+        plt.savefig(img_buf, format='png')
+        img_buf.seek(0)
+        doc.add_picture(img_buf, width=Inches(6.0))
+        plt.close()
+
         doc.add_page_break()
 
+        # 4. INTERPRETACIÓN DE RESULTADOS
         doc.add_heading('4. INTERPRETACIÓN DE RESULTADOS', level=1)
         doc.add_heading('A. Dimensión de Relaciones', level=2)
         doc.add_paragraph(txt_a)
@@ -355,22 +390,31 @@ if None not in st.session_state.respuestas.values():
         doc.add_heading('C. Dimensión de Estabilidad', level=2)
         doc.add_paragraph(txt_c)
 
+        # 5. CONCLUSIONES Y RECOMENDACIONES
         doc.add_heading('5. CONCLUSIONES Y RECOMENDACIONES', level=1)
         p_diag = doc.add_paragraph()
         p_diag.add_run(conclusion_narrativa)
         
-        doc.add_paragraph("\nRecomendaciones:")
+        doc.add_paragraph("\nRecomendaciones Terapéuticas:")
         for r in recomendaciones:
             doc.add_paragraph(r, style='List Bullet')
 
+        # Firmas
         doc.add_paragraph("\n\n\n" + "_"*40).alignment = WD_ALIGN_PARAGRAPH.CENTER
         p_firma = doc.add_paragraph(f"{exam}\n{lugar}")
         p_firma.alignment = WD_ALIGN_PARAGRAPH.CENTER
 
+        # BOTÓN DE DESCARGA
         buf = BytesIO()
         doc.save(buf)
-        st.download_button("📥 DESCARGAR INFORME CLÍNICO FINAL (WORD)", buf.getvalue(), f"Informe_FES_{nombre.replace(' ', '_')}.docx", type="primary", use_container_width=True)
+        st.download_button(
+            label="📥 DESCARGAR INFORME CLÍNICO FINAL (WORD)", 
+            data=buf.getvalue(), 
+            file_name=f"Informe_FES_{nombre.replace(' ', '_')}.docx", 
+            type="primary", 
+            use_container_width=True
+        )
 
 else:
     with tab_results:
-        st.warning("⚠️ Complete las 90 preguntas para generar el informe pericial.")
+        st.info("⚠️ Complete las 90 preguntas en la pestaña del cuestionario para generar las gráficas, el análisis y el documento Word.")
